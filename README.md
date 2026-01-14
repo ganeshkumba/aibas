@@ -1,182 +1,129 @@
-<<<<<<< HEAD
+# AI‑Based Accounting System (MVP)
 
-# AI-Based Accounting System
+An AI‑powered accounting SaaS MVP that automates core accounting tasks such as ingesting documents, extracting key fields, and preparing basic summaries for accountants and businesses.
 
-An AI-powered accounting SaaS system designed to automate core accounting tasks, reducing manual effort for businesses and accountants. This system leverages OCR, AI-based transaction categorization, and intelligent suggestions to streamline financial workflows.
-
-
-## Table of Contents
-
-- [Features](#features)
-- [Usage](#usage)
-- [Support](#support)
-- [License](#license)
+The current codebase focuses on:
+- A Django project `acctproj` with a `core` app for business and document management.
+- OCR‑based extraction using Tesseract.
+- Simple rule‑based and AI‑assisted parsing into line items.
+- A basic web UI to sign up, log in, register businesses, upload documents, and view extracted data.
 
 ---
 
-## Features
+## Features (Current MVP)
 
 ### 1. Document Processing
-- Reads invoices, receipts, bills, and bank statements using OCR.
-- Extracts key details like amounts, dates, GST numbers, and vendor/customer info.
-- Primary OCR: **Tesseract**, fallback: **Textract** (cloud-based).
+- Upload invoices, receipts, bills, and bank statements as image files.
+- Extract key details such as dates, amounts, GSTIN, PAN, and vendor information using OCR.
+- OCR is powered by **Tesseract**; non‑image formats fall back to a simple placeholder message in this MVP.
 
-### 2. Ledger & Transaction Management
-- Automatically creates and updates ledger accounts.
-- Categorizes transactions using AI suggestions.
-- Performs **basic bank reconciliation**:
-  - Matches bank transactions with ledger entries.
-  - Flags discrepancies for manual review.
+### 2. Business & Document Management
+- Create and manage businesses.
+- Associate uploaded documents with a business.
+- View documents, OCR text, and extracted line items for each business.
+- See basic summaries of income, expenses, and GST aggregates per business.
 
-### 3. GST & ITR Preparation
-- Prepares GST summaries from ledger entries.
-- Drafts ITR-ready data for filing.
-- Future goal: fully automated GST/ITR e-filing.
-
-### 4. AI Intelligence
-- Suggests categorizations for unclear transactions.
-- Detects inconsistencies and anomalies in entries.
-- Learns over time to handle complex accounting rules.
+### 3. Ledger & AI Roadmap (Planned / Partially Implemented)
+- Core ledger models and services exist under `apps/ledger` for double‑entry vouchers and account balances.
+- AI bridge and ingestion services under `apps/ai_bridge` and `apps/ingestion` will eventually:
+  - Turn uploaded documents into draft vouchers.
+  - Suggest ledger accounts and tax breakdowns automatically.
+- These modules are **work in progress** and not yet wired into the main UI.
 
 ---
 
 ## Tech Stack
 - **Backend:** Python, Django  
-- **Frontend:** HTML, CSS, JavaScript  
-- **Database:** PostgreSQL / Django ORM  
-- **Others:** Git/GitHub, free API integrations for OCR and parsing  
+- **Database:** SQLite (MVP) via Django ORM  
+- **OCR:** Tesseract  
+- **Frontend:** Django templates (HTML/CSS)  
 
 ---
 
-## Project Status
-- **Current:** Handles routine accounting tasks like ledger entries, transaction categorization, and bank reconciliation. Draft GST/ITR data generation works.  
-- **Pending / Next Version:**  
-  - Full automation of GST/ITR filing  
-  - Advanced exception handling  
-  - Predictive insights and financial analytics  
-  - Multi-platform support (mobile/web dashboards)  
-  - Integration with banks and third-party accounting tools  
+## Quick Start (Local)
 
----
-
-## Contribution Guidelines & Alerts
-
-**⚠️ Important Notices:**  
-1. Do **NOT modify the code directly** on the main branch. Wait for all commits to be reviewed and merged.  
-2. Always create a new branch for your features or bug fixes:  
-```bash
-git checkout -b feature/your-feature-name
-
-
-## Installation
-
-### Prerequisites
-
-- Python 3.8 or higher
-- pip package manager
-- Virtual environment (recommended)
-
-### Setup Steps
-
-1. Clone the repository
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/ai-accounting.git
-cd ai-accounting
+git clone https://github.com/YVK49/AI-based-accounting-system.git
+cd AI-based-accounting-system
 ```
 
-2. Create a virtual environment
+### 2. Create and activate a virtual environment
+
+**Windows (PowerShell):**
 
 ```bash
 python -m venv venv
+venv\Scripts\Activate.ps1
 ```
 
-3. Activate the environment
-
 **Linux/macOS:**
+
 ```bash
+python -m venv venv
 source venv/bin/activate
 ```
 
-**Windows:**
-```bash
-venv\Scripts\activate
-```
-
-4. Install dependencies
+### 3. Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-5. Run migrations
+### 4. Install Tesseract OCR (required for image OCR)
+
+- **Ubuntu (example):**
+
+  ```bash
+  sudo apt update
+  sudo apt install -y tesseract-ocr
+  ```
+
+- **Windows / macOS:**  
+  Install Tesseract from the official binaries for your OS, and ensure `tesseract` is on your `PATH`.  
+  If Tesseract is missing, uploads will succeed but OCR text will fall back to a placeholder.
+
+### 5. Apply migrations
 
 ```bash
 python manage.py migrate
 ```
 
-6. Start the development server
+### 6. Run the development server
 
 ```bash
 python manage.py runserver
 ```
 
-## Usage
+Then open `http://127.0.0.1:8000/` in your browser.
 
-After starting the development server, navigate to `http://localhost:8000` in your web browser to access the application.
+High‑level flows in the current UI:
+- Sign up and log in.
+- Create a business.
+- Upload documents for that business.
+- View documents and extracted text/line items.
+
+---
+
+## Contribution Notes
+
+- Prefer creating feature branches from `main`:
+
+  ```bash
+  git checkout -b feature/your-feature-name
+  ```
+
+- Open a Pull Request on GitHub (`YVK49/AI-based-accounting-system`) for review before merging to `main`.
+
+---
 
 ## Support
 
-For any issues or inquiries:
+- **GitHub Issues:** `https://github.com/YVK49/AI-based-accounting-system/issues`
 
-- **Email:** vamshikrishna8330.com
-- **GitHub Issues:** [Link to Issues](https://github.com/YVK49/AI-based-accounting-system/issues)
+---
 
 ## License
 
-This project is licensed under the Apache 2.0 License. See the [LICENSE](LICENSE) file for details.
-=======
-# AI Accounting MVP (Django + SQLite)
-
-This is a minimal MVP scaffold for the AI accounting SaaS you approved.
-It includes:
-- Django project `acctproj`
-- app `core` with Business, Document and simple OCR ingestion
-- Simple UI to register a business, upload documents and view extracted OCR text
-- Synchronous processing (for MVP). Replace with Celery for production.
-
-## Quick start (local)
-
-1. Create a Python virtualenv and activate it (Python 3.11+ recommended)
-   ```
-   python -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-2. Install Tesseract OCR (system package). On Ubuntu:
-   ```
-   sudo apt update
-   sudo apt install -y tesseract-ocr
-   ```
-   If tesseract is not installed, uploaded documents will store a placeholder message.
-
-3. Run migrations and start server:
-   ```
-   python manage.py migrate
-   python manage.py runserver
-   ```
-
-4. Open http://127.0.0.1:8000/ in your browser.
-   - Register a business at `/businesses/new/`
-   - Upload documents at `/businesses/<id>/upload/`
-   - View documents list at `/businesses/<id>/documents/`
-
-## Notes
-- DB: SQLite for MVP (`db.sqlite3`)
-- This scaffold is intentionally minimal. Next steps after you review:
-  - Add ledger models and mapping rules
-  - Add bank statement parsers and reconciliation
-  - Add background jobs (Celery/Redis) and move OCR off the request thread
-  - Add authentication and role management for CAs
->>>>>>> signup-and-login
+This project is licensed under the Apache 2.0 License. See the `LICENSE` file for details.
