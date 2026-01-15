@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from apps.accounts.models import Organization, Business
+from core.models import Business
 import uuid
 
 class FinancialYear(models.Model):

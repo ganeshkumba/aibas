@@ -52,14 +52,12 @@ class DocumentUploadForm(forms.ModelForm):
 
 # -------------------- SIGNUP FORM --------------------
 class SignUpForm(UserCreationForm):
+    full_name = forms.CharField(required=True, widget=forms.TextInput(attrs={'placeholder': 'Full Name'}))
     email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'placeholder': 'Email'}))
 
     class Meta:
         model = User
-        fields = ("username", "email", "password1", "password2")
-        widgets = {
-            'username': forms.TextInput(attrs={'placeholder': 'Username'}),
-        }
+        fields = ("email", "full_name")
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
@@ -70,8 +68,9 @@ class SignUpForm(UserCreationForm):
 
 # -------------------- LOGIN FORM --------------------
 class LoginForm(AuthenticationForm):
-    username = forms.CharField(
-        widget=forms.TextInput(attrs={"placeholder": "Username", "autocomplete": "username"})
+    username = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={"placeholder": "Email", "autocomplete": "email"})
     )
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={"placeholder": "Password", "autocomplete": "current-password"})

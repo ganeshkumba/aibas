@@ -1,33 +1,42 @@
 {% extends "core/base.html" %}
 
 {% block content %}
-<h2>Sign Up</h2>
+<div class="card" style="max-width:400px;margin:auto;">
+    <h2>Sign Up</h2>
 
-<form method="post">
-  {% csrf_token %}
+    <form method="post">
+        {% csrf_token %}
 
-  {{ form.non_field_errors }}
+        {{ form.non_field_errors }}
 
-  <div>
-    <label>Username</label>
-    {{ form.username }}
-  </div>
+        <div>
+            <label>Full Name</label>
+            {{ form.full_name }}
+            {{ form.full_name.errors }}
+        </div>
 
-  <div>
-    <label>Email</label>
-    {{ form.email }}
-  </div>
+        <div>
+            <label>Email</label>
+            {{ form.email }}
+            {{ form.email.errors }}
+        </div>
 
-  <div>
-    <label>Password</label>
-    {{ form.password1 }}
-  </div>
+        {% for field in form %}
+        {% if field.name == 'password1' or field.name == 'password2' %}
+        <div>
+            <label>{{ field.label }}</label>
+            {{ field }}
+            {{ field.errors }}
+        </div>
+        {% endif %}
+        {% endfor %}
 
-  <div>
-    <label>Confirm Password</label>
-    {{ form.password2 }}
-  </div>
+        <button type="submit" style="margin-top:15px;">Create Account</button>
+    </form>
 
-  <button type="submit">Create Account</button>
-</form>
+    <p style="margin-top:10px;">
+        Already have an account?
+        <a href="{% url 'core:login' %}">Login</a>
+    </p>
+</div>
 {% endblock %}

@@ -18,9 +18,17 @@ Return STRICT JSON only:
 {{
   "vendor": "",
   "invoice_no": "",
-  "date": "",
-  "total_amount": "",
-  "tax_amount": "",
+  "date": "YYYY-MM-DD",
+  "total_amount": 0.0,
+  "tax_amount": 0.0,
+  "line_items": [
+    {{
+      "description": "",
+      "amount": 0.0,
+      "tax_rate": "",
+      "ledger_suggestion": ""
+    }}
+  ],
   "confidence": 0-100
 }}
 

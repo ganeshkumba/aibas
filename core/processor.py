@@ -5,8 +5,7 @@ from .models import Document, ExtractedLineItem, Business
 from apps.ai_bridge.services.ai_service import AIService
 import pytesseract
 
-ai_service = AIService()
-
+# AIService will be instantiated inside processing functions to avoid import-time side effects
 # ---------- LEDGER KEYWORDS ----------
 LEDGER_MAP = {
     'rent': 'Rent Expense',
@@ -52,74 +51,118 @@ def process_document(doc: Document):
     print("=== END OCR TEXT ===\n")
 
     # ---------- AI STEP ----------
+    ai_service = AIService()
     ai_data = {}
     try:
         ai_data = ai_service.process_document(text)
+        print(f"AI Data: {ai_data}")
+        
+        # Populate Document fields if AI found them
+        if ai_data.get('invoice_no'):
+            doc.document_number = ai_data['invoice_no']
+        if ai_data.get('date'):
+            try:
+                # Expecting YYYY-MM-DD from AI
+                doc.document_date = datetime.strptime(ai_data['date'], "%Y-%m-%d").date()
+            except:
+                pass
+        doc.save()
     except Exception as e:
+        print(f"AI Service Error: {e}")
         ai_data = {"error": str(e)}
 
-    # ---------- SPLIT LINES ----------
-    lines = text.split("\n")
+    # ---------- EXTRACTION LOGIC ----------
+    items_created = 0
 
-    for raw_line in lines:
-        line = raw_line.strip()
-        if not line:
-            continue
-
-        print(f"Processing line: {line}")  # DEBUG: show each line
-
-        # Common patterns on receipts
-        date_match = re.search(r'(\d{2}[-/]\d{2}[-/]\d{4})', line)
-        amount_match = re.findall(r'\d+\.\d{2}', line)  # get all amounts
-        invoice_match = re.search(r'(?:INV|Invoice)\s*[:\s]*([A-Za-z0-9-]+)', line, re.IGNORECASE)
-        vendor_match = re.search(r'(?:Vendor|From|Bill From)[:\s]*([A-Za-z0-9 &]+)', line, re.IGNORECASE)
-
-        # Only save if some data exists
-        if date_match or amount_match or invoice_match or vendor_match:
+    # 1. Try AI Line Items
+    if ai_data.get('line_items'):
+        print(f"Using AI for line item extraction...")
+        for ai_item in ai_data['line_items']:
             try:
                 item = ExtractedLineItem(document=doc)
-
-                # Date
-                if date_match:
-                    try:
-                        item.date = datetime.strptime(date_match.group(1).replace('-', '/'), "%d/%m/%Y").date()
-                    except:
-                        item.date = None
-
-                # Amount: take last one on line (usually total)
-                if amount_match:
-                    item.amount = Decimal(amount_match[-1])
-
-                # Invoice
-                if invoice_match:
-                    item.invoice_no = invoice_match.group(1)
-
-                # Vendor
-                vendor_name = vendor_match.group(1) if vendor_match else None
-                item.vendor = vendor_name
-
-                # Ledger
-                item.ledger_account = classify_ledger(vendor_name or line)
-
-                # GST extraction
-                gst_rate, tax_amount = extract_gst(line)
-                item.gst_rate = gst_rate
-                item.tax_amount = tax_amount
-
-                # Save raw + AI suggestions
-                item.raw = {
-                    "raw_line": line,
-                    "ai_suggestion": ai_data
-                }
-
+                item.vendor = ai_data.get('vendor')
+                item.invoice_no = ai_data.get('invoice_no')
+                item.date = doc.document_date
+                item.amount = Decimal(str(ai_item.get('amount', 0)))
+                # Extract tax rate if present
+                item.gst_rate = ai_item.get('tax_rate')
+                item.ledger_account = ai_item.get('ledger_suggestion') or classify_ledger(ai_item.get('description', ''))
+                
+                item.raw = {"source": "AI_LineItem", "ai_data": ai_item}
                 item.save()
-                print(f"Saved line item: {item}")  # DEBUG: success
+                items_created += 1
             except Exception as e:
-                print(f"Failed to save line: {line} | Error: {e}")
+                print(f"Failed to save AI line item: {e}")
+
+    # 2. If no line items, try AI Summary Header
+    if items_created == 0 and ai_data and "error" not in ai_data and ai_data.get("confidence", 0) > 40:
+        if ai_data.get('total_amount') or ai_data.get('vendor'):
+            try:
+                item = ExtractedLineItem(document=doc)
+                item.vendor = ai_data.get("vendor")
+                item.invoice_no = ai_data.get("invoice_no")
+                item.date = doc.document_date
+                item.amount = Decimal(str(ai_data.get("total_amount") or 0))
+                item.tax_amount = Decimal(str(ai_data.get("tax_amount") or 0))
+                item.ledger_account = classify_ledger(ai_data.get("vendor"))
+                item.raw = {"source": "AI_Summary", "ai_full_extraction": ai_data}
+                item.save()
+                items_created += 1
+                print(f"Created AI summary line item: {item}")
+            except Exception as e:
+                print(f"Failed to create AI summary line item: {e}")
+
+    # 3. Fallback to Regex if still no items
+    if items_created == 0:
+        print("Falling back to Regex line-by-line extraction...")
+        lines = text.split("\n")
+        for raw_line in lines:
+            line = raw_line.strip()
+            if not line or len(line) < 5:
+                continue
+
+            amount_match = re.findall(r'\d+\.\d{2}', line)
+            date_match = re.search(r'(\d{2}[-/]\d{2}[-/]\d{4})', line)
+            
+            if amount_match or date_match:
+                try:
+                    item = ExtractedLineItem(document=doc)
+                    if date_match:
+                        try:
+                            item.date = datetime.strptime(date_match.group(1).replace('-', '/'), "%d/%m/%Y").date()
+                        except: pass
+                    
+                    if amount_match:
+                        item.amount = Decimal(amount_match[-1])
+                    
+                    # Try to find a vendor or invoice on this same line
+                    vendor_match = re.search(r'(?:Vendor|From)[:\s]*([A-Za-z0-9 &]+)', line, re.IGNORECASE)
+                    item.vendor = vendor_match.group(1) if vendor_match else None
+                    item.ledger_account = classify_ledger(item.vendor or line)
+                    
+                    gst_rate, tax_amount = extract_gst(line)
+                    item.gst_rate = gst_rate
+                    item.tax_amount = tax_amount
+                    
+                    item.raw = {"source": "Regex_Fallback", "line": line}
+                    item.save()
+                    items_created += 1
+                except Exception as e:
+                    print(f"Failed to save regex fallback line: {e}")
+
+    # ---------- LEDGER AUTOMATION (BRIDGE) ----------
+    if items_created > 0:
+        try:
+            from apps.ledger.services.automation_service import AutomationService
+            voucher = AutomationService.convert_document_to_voucher(doc)
+            if voucher:
+                print(f"Created draft ledger voucher: {voucher.voucher_number}")
+        except Exception as e:
+            print(f"Ledger Automation Error: {e}")
 
     doc.status = "processed"
     doc.save()
-    print(f"Document {doc.id} processed successfully!\n")
+    print(f"Document {doc.id} processing complete. Items: {items_created}\n")
 
 
 def generate_business_summary(business: Business):
