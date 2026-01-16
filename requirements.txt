@@ -3,3 +3,5 @@ djangorestframework==3.16.1
 pytesseract
 pillow
 python-decouple
+requests
+

@@ -12,8 +12,8 @@ class LedgerService:
         voucher_data: {date, type, number, fy_id, narration}
         entries_data: [{account_id, debit, credit}, ...]
         """
-        # 1. FY Check
-        fy = FinancialYear.objects.get(id=voucher_data['fy_id'])
+        # 1. FY Check - SECURITY: Ensure FY belongs to the requested business
+        fy = FinancialYear.objects.get(id=voucher_data['fy_id'], business=business)
         if fy.is_locked:
             raise ValidationError("Cannot create vouchers in a locked Financial Year.")
 
@@ -37,6 +37,7 @@ class LedgerService:
         total_credit = Decimal('0.00')
 
         for entry in entries_data:
+            # SECURITY: Account must belong to the business
             acc = Account.objects.get(id=entry['account_id'], business=business)
             
             amount_dr = Decimal(str(entry.get('debit', 0)))
@@ -59,14 +60,22 @@ class LedgerService:
         return voucher
 
     @staticmethod
-    def get_account_balance(account_id):
-        # Service logic for calculating real-time balance
-        entries = JournalEntry.objects.filter(account_id=account_id)
+    def get_account_balance(account_id, business=None):
+        """
+        Calculates balance for an account. 
+        SECURITY: If business is provided, ensures account belongs to it.
+        """
+        lookup = {"id": account_id}
+        if business:
+            lookup["business"] = business
+            
+        acc = Account.objects.get(**lookup)
+        
+        entries = JournalEntry.objects.filter(account=acc)
         totals = entries.aggregate(
             dr_sum=Sum('debit'),
             cr_sum=Sum('credit')
         )
-        opening = Account.objects.get(id=account_id).opening_balance
         
-        balance = opening + (totals['dr_sum'] or Decimal('0.00')) - (totals['cr_sum'] or Decimal('0.00'))
+        balance = acc.opening_balance + (totals['dr_sum'] or Decimal('0.00')) - (totals['cr_sum'] or Decimal('0.00'))
         return balance

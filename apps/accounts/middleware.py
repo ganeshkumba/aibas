@@ -1,6 +1,6 @@
 import threading
-from django.shortcuts import get_object_or_404
-from .models import Business
+from django.db.models import Q
+from core.models import Business
 
 # Thread-local storage for current multitenancy context
 _thread_locals = threading.local()
@@ -11,7 +11,8 @@ def get_current_business():
 class MultitenancyMiddleware:
     """
     Middleware to handle multitenancy context.
-    Expects 'X-Business-ID' header or session/query param.
+    Expects 'X-Business-ID' header or 'business_id' query param.
+    Secures data by ensuring the user has access to the requested business.
     """
     def __init__(self, get_response):
         self.get_response = get_response
@@ -20,12 +21,13 @@ class MultitenancyMiddleware:
         business_id = request.headers.get('X-Business-ID') or request.GET.get('business_id')
         
         if business_id and request.user.is_authenticated:
-            # Security: Ensure user belongs to the organization that owns this business
-            # or is a superuser.
-            business = Business.objects.filter(
-                id=business_id, 
-                organization=request.user.organization
-            ).first()
+            # Security: Ensure user is the owner or the creator of this business,
+            # or is a superuser/staff.
+            lookup = Q(id=business_id)
+            if not request.user.is_superuser:
+                lookup &= (Q(owner=request.user) | Q(created_by=request.user))
+            
+            business = Business.objects.filter(lookup).first()
             
             if business:
                 request.business = business
@@ -39,7 +41,7 @@ class MultitenancyMiddleware:
 
         response = self.get_response(request)
         
-        # Cleanup
+        # Cleanup to prevent leak to other threads
         if hasattr(_thread_locals, 'business'):
             del _thread_locals.business
             

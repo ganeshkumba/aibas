@@ -1,12 +1,13 @@
 import requests
 import json
+from django.conf import settings
 from .base import BaseAIProvider
 
 
 class OllamaProvider(BaseAIProvider):
     def __init__(self, model="llama3.1"):
         self.model = model
-        self.url = "http://localhost:11434/api/generate"
+        self.url = getattr(settings, 'OLLAMA_URL', "http://localhost:11434/api/generate")
 
     def extract(self, text: str) -> dict:
         prompt = f"""
@@ -18,9 +19,17 @@ Return STRICT JSON only:
 {{
   "vendor": "",
   "invoice_no": "",
-  "date": "",
-  "total_amount": "",
-  "tax_amount": "",
+  "date": "YYYY-MM-DD",
+  "total_amount": 0.0,
+  "tax_amount": 0.0,
+  "line_items": [
+    {{
+      "description": "",
+      "amount": 0.0,
+      "tax_rate": "",
+      "ledger_suggestion": ""
+    }}
+  ],
   "confidence": 0-100
 }}
 

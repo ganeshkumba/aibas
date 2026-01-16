@@ -1,20 +1,34 @@
-from .base import AIProvider
-from decimal import Decimal
+from .base import BaseAIProvider
 
-class MockAIProvider(AIProvider):
-    def extract_invoice_data(self, file_path):
-        # Simulated OCR and LLM Extraction
+
+class MockAIProvider(BaseAIProvider):
+    """
+    Simple, deterministic mock provider that returns hard‑coded,
+    but realistic looking invoice data from raw text.
+    Used for local testing without calling a real LLM.
+    """
+
+    def extract(self, text: str) -> dict:
+        # Simulated extraction output
         return {
-            "vendor_name": "Generic Supplier Ltd",
-            "invoice_date": "2026-01-04",
+            "vendor": "Generic Supplier Ltd",
+            "invoice_no": "MOCK-INV-001",
+            "date": "2026-01-04",
             "total_amount": 1180.00,
-            "gst_amount": 180.00,
-            "tax_rate": 18.0,
-            "suggested_ledger": "Purchase Account"
+            "tax_amount": 180.00,
+            "line_items": [
+                {
+                    "description": "Consulting Services",
+                    "amount": 1000.00,
+                    "tax_rate": "18%",
+                    "ledger_suggestion": "Consulting Fees"
+                },
+                {
+                    "description": "GST (18%)",
+                    "amount": 180.00,
+                    "tax_rate": "18%",
+                    "ledger_suggestion": "IGST"
+                }
+            ],
+            "confidence": 90,
         }
-
-    def classify_transaction(self, narration):
-        return "Conveyance Expense"
-
-    def generate_compliance_explanation(self, context_data):
-        return "The tax liability increased because of higher interstate sales compared to previous month."
