@@ -13,6 +13,10 @@ class ApiView(View):
     """
     
     def dispatch(self, request, *args, **kwargs):
+        # SECURITY: Ensure user is authenticated for all API calls
+        if not request.user.is_authenticated:
+            return self.error_response("Authentication required", status=401)
+            
         try:
             return super().dispatch(request, *args, **kwargs)
         except ValidationError as e:

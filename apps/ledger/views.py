@@ -68,7 +68,7 @@ class AccountListView(ApiView):
             "name": a.name,
             "group": a.group.name,
             "classification": a.group.classification,
-            "balance": str(LedgerService.get_account_balance(a.id))
+            "balance": str(LedgerService.get_account_balance(a.id, business=request.business))
         } for a in accounts]
         
         return self.success_response(data)

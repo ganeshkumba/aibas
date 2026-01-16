@@ -3,18 +3,29 @@ from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator, FileExtensionValidator
 from django.utils import timezone
 
+# This helper gets the User model we defined in settings (apps.accounts.User)
 User = get_user_model()
 
 
 class Business(models.Model):
-    # -------- EXISTING FIELDS (UNCHANGED) --------
+    """
+    BUSINESS MODEL:
+    Think of this as a 'Company Profile'. 
+    It stores all the tax and identity info for a business that needs accounting.
+    """
+    
+    # The official name of the company
     name = models.CharField(max_length=200)
+
+    # PAN: Permanent Account Number (Unique ID for Tax in India)
     pan = models.CharField(
         max_length=20,
         blank=True,
         null=True,
         validators=[RegexValidator(r'^[A-Z]{5}[0-9]{4}[A-Z]$', 'Invalid PAN format')]
     )
+
+    # GSTIN: Goods and Services Tax Identification Number
     gstin = models.CharField(
         max_length=20,
         blank=True,
@@ -24,19 +35,24 @@ class Business(models.Model):
             'Invalid GSTIN format'
         )]
     )
+
+    # The start and end dates of the financial year (e.g., April 1st to March 31st)
     financial_year_start = models.DateField(blank=True, null=True)
+    financial_year_end = models.DateField(blank=True, null=True)
+
+    # Who created this profile in the system (could be an accountant)
     created_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name='businesses'
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # -------- 🔥 NEW ADDITIONS --------
-    financial_year_end = models.DateField(blank=True, null=True)
-
-    is_active = models.BooleanField(default=True)  # currently working status
-
+    # Status: Is the business currently active, or has it closed down?
+    is_active = models.BooleanField(default=True)
+    
+    # Internal record for when the last draft report was made
     last_draft_generated_at = models.DateTimeField(blank=True, null=True)
 
+    # The actual person who owns the company (the client)
     owner = models.ForeignKey(
         User,
         null=True,
@@ -47,10 +63,10 @@ class Business(models.Model):
     )
 
     BUSINESS_STATUS = [
-        ('onboarding', 'Onboarding'),
-        ('active', 'Active'),
-        ('paused', 'Paused'),
-        ('closed', 'Closed'),
+        ('onboarding', 'Onboarding'), # Just joined
+        ('active', 'Active'),         # Normal operation
+        ('paused', 'Paused'),         # Temporary stop
+        ('closed', 'Closed'),         # Permanently shut
     ]
     status = models.CharField(
         max_length=20,
@@ -59,7 +75,7 @@ class Business(models.Model):
     )
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-created_at'] # Shows newest businesses first
         indexes = [
             models.Index(fields=['created_by']),
             models.Index(fields=['owner']),
@@ -72,43 +88,66 @@ class Business(models.Model):
 
 
 def upload_to(instance, filename):
+    """
+    Decides where to save files on the computer. 
+    It organizes them by Business ID so folders don't get messy.
+    """
     return f"business_{instance.business.id}/documents/{filename}"
 
 
 class Document(models.Model):
-    # -------- EXISTING FIELDS (UNCHANGED) --------
+    """
+    DOCUMENT MODEL:
+    Think of this as a 'Digital Filing Cabinet'.
+    Every paper receipt or PDF invoice you upload is stored here.
+    """
     DOC_TYPES = [
         ('receipt', 'Receipt/Invoice'),
         ('bank', 'Bank Statement'),
         ('other', 'Other'),
     ]
 
+    # Which business does this receipt belong to?
     business = models.ForeignKey(
         Business, on_delete=models.CASCADE, related_name='documents'
     )
+    
+    # Who uploaded it?
     uploaded_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL
     )
+
+    # The actual file (PDF/Image)
     file = models.FileField(
         upload_to=upload_to,
         validators=[FileExtensionValidator(
             allowed_extensions=['pdf', 'png', 'jpg', 'jpeg', 'bmp', 'tiff']
         )]
     )
+
     doc_type = models.CharField(max_length=20, choices=DOC_TYPES, default='receipt')
+    
+    # Tracks the progress (e.g., 'uploaded' -> 'processing' -> 'completed')
     status = models.CharField(max_length=50, default='uploaded')
+
+    # The 'Plain Text' that the AI reads from the image
     ocr_text = models.TextField(blank=True, null=True)
+    
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
-    # -------- 🔥 NEW ADDITIONS --------
+    # The Invoice Number or Bill Number written on the paper
     document_number = models.CharField(
         max_length=100, blank=True, null=True, help_text="Invoice / reference number"
     )
 
+    # The date written on the receipt
     document_date = models.DateField(blank=True, null=True)
 
+    # Has the AI finished reading this?
     is_processed = models.BooleanField(default=False)
 
+    # A unique fingerprint of the file. 
+    # If you try to upload the same photo twice, the system catches it here.
     checksum = models.CharField(
         max_length=64, blank=True, null=True,
         help_text="Used to detect duplicate uploads"
@@ -128,21 +167,38 @@ class Document(models.Model):
 
 
 class ExtractedLineItem(models.Model):
-    # -------- EXISTING FIELDS (UNCHANGED) --------
+    """
+    EXTRACTED LINE ITEM:
+    Think of this as the 'AI's Notes'. 
+    Once the AI reads a document, it writes down the specific details it found below.
+    """
+    # Link back to the original paper document
     document = models.ForeignKey(
         Document, on_delete=models.CASCADE, related_name='lines'
     )
+    
     date = models.DateField(null=True, blank=True)
+    
+    # Who was paid? (e.g., "Amazon" or "Starbucks")
     vendor = models.CharField(max_length=255, blank=True, null=True)
-    amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
-    tax_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
-    gst_rate = models.CharField(max_length=20, blank=True, null=True)
+    
+    # Money details
+    amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True) # Total price
+    tax_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True) # Taxes paid
+    gst_rate = models.CharField(max_length=20, blank=True, null=True) # % of tax
+    
+    # Reference number
     invoice_no = models.CharField(max_length=200, blank=True, null=True)
+    
+    # Which "Category" this belongs to in the ledger (e.g., "Office Supplies")
     ledger_account = models.CharField(max_length=100, blank=True, null=True)
+    
+    # A copy of the "Raw data" from the AI in case we need more details later
     raw = models.JSONField(default=dict, blank=True)
 
-    # -------- 🔥 NEW ADDITIONS --------
+    # Has a human (accountant) checked if the AI was correct?
     is_verified = models.BooleanField(default=False)
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -155,3 +211,4 @@ class ExtractedLineItem(models.Model):
 
     def __str__(self):
         return f"Line {self.id} ({self.vendor or 'Unknown'} - {self.amount or 0})"
+
