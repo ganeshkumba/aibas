@@ -63,8 +63,3 @@ To reach a perfect 10, the following should be implemented:
 3.  **Financial Validation:** Implement checksums/signatures for transaction integrity.
 
 ---
-
-## 🚨 Critical Instructions for Developer
-1.  **Production Deployment:** Ensure `DEBUG=False` in your production environment.
-2.  **Secret Rotation:** Generate a new `SECRET_KEY` for production; never use the bridge key provided in `.env`.
-3.  **SSL:** Ensure your server (Nginx/Apache) is configured for SSL before enabling HSTS in production.
