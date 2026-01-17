@@ -151,8 +151,10 @@ The `process_document` function attempts three distinct strategies to ensure no 
 *   **Auto-Voucher Creation**: Once items are extracted, the `AutomationService` is triggered to create a **Draft Journal Voucher**. This eliminates manual data entry for the accountant.
 *   **Status Tracking**: Updates document status to `processed` or `ocr_failed` to keep the user informed of the background progress.
 
-### 📈 Business Intelligence Dashboard
-The `generate_business_summary` function aggregates data across all documents for a business:
-*   **Categorization**: Groups all spending by Ledger Account.
-*   **Performance Metrics**: Calculates `Total Income`, `Total Expense`, and `Net Profit` in real-time.
-*   **Tax Overview**: Provides an aggregate view of GST paid/collected across different rates.
+### � Financial Data Aggregator (Internal Logic)
+While a dedicated **Business Intelligence Dashboard** UI is still in development, the codebase already contains the logic (`generate_business_summary`) to power it:
+*   **Categorization**: Groups spending by Ledger Account (e.g., Rent, Salaries).
+*   **Initial Metrics**: Calculates `Total Income`, `Total Expense`, and `Net Profit`.
+*   **Tax Overview**: Aggregates GST paid based on extraction data.
+*   **Note**: This data is currently available in the backend and primitive versions are used in the `business_detail` view, but the full visual dashboard is a planned feature.
+
