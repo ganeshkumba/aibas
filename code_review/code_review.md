@@ -90,4 +90,34 @@
 
 ### User Authentication
 - **`SignUpForm`**: Extends `UserCreationForm` to include `full_name` and custom `email` validation.
-- **`LoginForm`**: Standardizes authentication using Email as the primary identifier instead of a username.
+- `LoginForm`: Standardizes authentication using Email as the primary identifier instead of a username.
+
+---
+
+## 🌐 Core Logic & Views (`core/views.py`)
+
+### 🔑 User Authentication
+Manages user sessions and secure access to the platform.
+
+*   **`signup_view`**: Uses `SignUpForm`. Validates, saves, and automatically logs in new users. *Note: Exception handling needs to be implemented.*
+*   **`login_view`**: Uses `LoginForm`. Standard email-based authentication. *Note: Exception handling needs to be implemented.*
+*   **`logout_view`**: Terminates the user session and redirects to the login page.
+
+### 🏢 Business Management
+The central hub for managing company profiles and financial dashboards.
+
+*   **`index` (Dashboard)**: The entry point. Retrieves all businesses created by the user, sorted by the most recent.
+*   **`business_create`**: Uses `BusinessForm`. Handles the creation of new company profiles and links them to the logged-in user.
+*   **`business_detail`**: The primary view for a specific company. Provides an AI-generated business summary and navigates to its documents.
+
+### 📄 Document Processing
+The "Smart" part of the application handling OCR and data extraction.
+
+*   **`upload_document`**: 
+    - Uses `DocumentUploadForm`.
+    - **OCR Engine**: Automatically detects if the file is an image (`.png`, `.jpg`, `.jpeg`, etc.).
+    - If valid, it runs **Tesseract OCR** to extract raw text.
+    - If invalid or unsupported, it flags the status for the MVP.
+    - Triggers the `process_document` function for background AI analysis.
+*   **`documents_list`**: Provides a historical view of all documents uploaded for a business, sorted chronologically.
+*   **`document_detail`**: A granular view of a single document, displaying both the original file and the specific line items extracted by the AI.
