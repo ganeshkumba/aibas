@@ -121,3 +121,38 @@ The "Smart" part of the application handling OCR and data extraction.
     - Triggers the `process_document` function for background AI analysis.
 *   **`documents_list`**: Provides a historical view of all documents uploaded for a business, sorted chronologically.
 *   **`document_detail`**: A granular view of a single document, displaying both the original file and the specific line items extracted by the AI.
+
+---
+
+## 🧠 AI Processor & Intelligence (`core/processor.py`)
+
+This module serves as the "brain" of the system, transforming raw OCR text into structured accounting data through multiple layers of logic.
+
+### 🏷️ Intelligent Classification
+The system uses keyword-based heuristics to categorize data before sending it to the ledger.
+*   **Ledger Mapping**: Automatically classifies expenses into categories like `Rent`, `Salaries`, `Office Supplies`, `Sales`, or `Purchases` based on predefined keyword triggers.
+*   **GST Detection**: Scans for `CGST`, `SGST`, and `IGST`. If markers are missing but a total exists, it intelligently estimates a 12% tax buffer for verification.
+
+### 🔍 Triple-Phase Extraction Logic
+The `process_document` function attempts three distinct strategies to ensure no data is lost:
+
+1.  **Phase 1: AI Detailed (Primary)**
+    *   Used when a document is high-quality.
+    *   Extracts granular line items (e.g., individual products/services) with their specific amounts and tax rates.
+2.  **Phase 2: AI Summary (Secondary)**
+    *   Used for simpler receipts or when line items are blurry.
+    *   Extracts the **Grand Total**, **Vendor Name**, and **Invoice Date** as a single summary entry.
+3.  **Phase 3: Regex Fallback (Emergency)**
+    *   Triggers when AI confidence is low or service is unavailable.
+    *   Uses pattern matching (Regex) to find any strings resembling dates (`DD/MM/YYYY`) or currency values (`0.00`).
+    *   **Flagging**: Marks these entries as "Action Required" for human verification.
+
+### ⚙️ Ledger Automation
+*   **Auto-Voucher Creation**: Once items are extracted, the `AutomationService` is triggered to create a **Draft Journal Voucher**. This eliminates manual data entry for the accountant.
+*   **Status Tracking**: Updates document status to `processed` or `ocr_failed` to keep the user informed of the background progress.
+
+### 📈 Business Intelligence Dashboard
+The `generate_business_summary` function aggregates data across all documents for a business:
+*   **Categorization**: Groups all spending by Ledger Account.
+*   **Performance Metrics**: Calculates `Total Income`, `Total Expense`, and `Net Profit` in real-time.
+*   **Tax Overview**: Provides an aggregate view of GST paid/collected across different rates.
