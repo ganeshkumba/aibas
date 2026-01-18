@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from .models import Document, ExtractedLineItem, Business
 from apps.ai_bridge.services.ai_service import AIService
+from apps.ledger.services.automation_service import AutomationService
 import pytesseract
 
 # AIService will be instantiated inside processing functions to avoid import-time side effects

@@ -85,21 +85,21 @@
       gap: 1.5rem;
     }
 
-    /* Sidebar - Classic FB style */
     .sidebar {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.25rem;
     }
 
     .sidebar a {
       font-family: 'Inter', sans-serif;
       text-decoration: none;
       color: var(--text-main);
-      font-size: 0.9rem;
-      padding: 0.5rem;
+      font-size: 0.85rem;
+      padding: 0.6rem 0.75rem;
       border-radius: 6px;
       transition: background 0.2s;
+      font-weight: 500;
     }
 
     .sidebar a:hover {
@@ -108,8 +108,17 @@
 
     .sidebar a.active {
       background: white;
-      font-weight: 600;
-      box-shadow: var(--card-shadow);
+      font-weight: 700;
+      border: 1px solid var(--border-classic);
+    }
+
+    .sidebar-section {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      padding: 0.75rem 0.75rem 0.25rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .main-content {
@@ -227,16 +236,15 @@
       color: #1877f2;
     }
 
-    /* Keep consistent FB colors */
-
     pre {
       background: #fbf9f6;
-      padding: 1.5rem;
+      padding: 1.25rem;
       border-radius: 6px;
       overflow: auto;
       font-family: 'Courier New', monospace;
       border: 1px solid var(--border-classic);
       font-size: 0.8rem;
+      line-height: 1.4;
       color: var(--text-main);
       border-left: 4px solid var(--old-money-gold);
     }
@@ -255,13 +263,10 @@
       <a href="{% url 'core:index' %}" class="logo">The Ledger <span>Est. 2024</span></a>
       <div class="nav-links">
         {% if user.is_authenticated %}
-        <a href="{% url 'core:index' %}">Home</a>
-        <a href="#">Network</a>
-        <a href="#">Reports</a>
-        <form action="{% url 'core:logout' %}" method="post" style="display:inline;">
-          {% csrf_token %}
+        <a href="{% url 'core:index' %}">News Feed</a>
+        <form action="{% url 'core:logout' %}" method="post" style="display:inline;">{% csrf_token %}
           <button type="submit" class="btn btn-secondary"
-            style="padding: 0.3rem 0.8rem; font-size:0.75rem">Logout</button>
+            style="padding: 0.35rem 0.8rem; font-size:0.75rem; font-weight: 700;">Logout</button>
         </form>
         {% else %}
         <a href="{% url 'core:login' %}">Log In</a>
@@ -274,29 +279,49 @@
   <div class="container">
     <div class="sidebar">
       {% if user.is_authenticated %}
-      <div
-        style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.5rem; padding: 0.5rem; font-family: 'Inter', sans-serif;">
-        {{ user.email }}
+      <div style="padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        <div
+          style="width: 32px; height: 32px; background: var(--fb-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-family: 'Playfair Display';">
+          {{ user.email|slice:":1"|upper }}</div>
+        <div class="small"
+          style="font-weight: 800; color: #1c1e21; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{
+          user.email }}</div>
       </div>
-      <a href="{% url 'core:index' %}" class="active">News Feed</a>
-      <a href="{% url 'core:business_create' %}">Create Business</a>
-      <hr style="border: 0; border-top: 1px solid var(--border-classic); margin: 0.5rem 0;">
-      <div style="font-size: 0.75rem; color: var(--text-secondary); padding: 0.5rem; font-weight: 700;">EXPLORE</div>
-      <a href="#">Ledger Groups</a>
-      <a href="#">Voucher List</a>
-      <a href="#">Settings</a>
+
+      <a href="{% url 'core:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">🏠
+        Home Feed</a>
+
+      {% if business %}
+      <div class="sidebar-section">{{ business.name|truncatechars:18 }}</div>
+      <a href="{% url 'core:business_detail' business.id %}"
+        class="{% if request.resolver_match.url_name == 'business_detail' %}active{% endif %}">📊 Business Overview</a>
+      <a href="{% url 'core:upload_document' business.id %}"
+        class="{% if request.resolver_match.url_name == 'upload_document' %}active{% endif %}">📤 Upload Invoice</a>
+      <a href="{% url 'core:documents_list' business.id %}"
+        class="{% if request.resolver_match.url_name == 'documents_list' %}active{% endif %}">📂 Document Vault</a>
+
+      <div class="sidebar-section">Accounting Stats</div>
+      <a href="{% url 'ledger:day-book' business.id %}">📓 Day Book</a>
+      <a href="{% url 'ledger:trial-balance' business.id %}">⚖️ Trial Balance</a>
+      <a href="{% url 'ledger:profit-loss' business.id %}">📈 Profit & Loss</a>
+      <a href="{% url 'ledger:balance-sheet' business.id %}">📉 Balance Sheet</a>
+      {% else %}
+      <a href="{% url 'core:business_create' %}">➕ New Business</a>
+      {% endif %}
+
+      <hr style="border: 0; border-top: 1px solid var(--border-classic); margin: 1rem 0;">
+      <div class="sidebar-section">Settings</div>
+      <a href="#">👤 My Profile</a>
+      <a href="#">⚙️ Preferences</a>
       {% endif %}
     </div>
 
     <div class="main-content">
-      {% if messages %}
-      {% for message in messages %}
-      <div class="card" style="border-left: 4px solid var(--old-money-gold);">
-        {{ message }}
-      </div>
-      {% endfor %}
-      {% endif %}
-
+      {% if messages %}{% for message in messages %}
+      <div class="card"
+        style="border-left: 4px solid var(--old-money-gold); padding: 0.75rem 1rem; margin-bottom: 1rem; background: #fffdf9;">
+        {{ message }}</div>
+      {% endfor %}{% endif %}
       {% block content %}{% endblock %}
     </div>
   </div>

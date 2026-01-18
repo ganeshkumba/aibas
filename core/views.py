@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import BusinessForm, DocumentUploadForm, SignUpForm, LoginForm
 from .models import Business, Document
@@ -11,6 +12,7 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.contrib import messages
 from apps.ledger.services.ledger_service import LedgerService
+from apps.ledger.services.cfo_service import CFOService
 
 # -------------------- AUTH VIEWS --------------------
 def signup_view(request):
@@ -61,11 +63,12 @@ def business_create(request):
                 business.created_by = request.user
                 business.save()
                 
-                # Robust Initialization: Create standard Tally groups
+                # Robust Initialization: Create standard Tally groups & current Financial Year
                 try:
                     LedgerService.initialize_standard_coa(business)
+                    LedgerService.initialize_financial_year(business)
                 except Exception as e:
-                    print(f"COA Initialization Error: {e}")
+                    print(f"Business Initialization Error: {e}")
                     
                 return redirect(reverse("core:business_detail", args=[business.id]))
             except IntegrityError:
@@ -78,7 +81,10 @@ def business_create(request):
 
 @login_required
 def business_detail(request, pk):
-    business = get_object_or_404(Business, pk=pk, created_by=request.user)
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=pk)
+    else:
+        business = get_object_or_404(Business, pk=pk, created_by=request.user)
     summary = generate_business_summary(business)
     return render(request, 'core/business_detail.html', {'business': business, 'summary': summary})
 
@@ -86,7 +92,10 @@ def business_detail(request, pk):
 # -------------------- DOCUMENTS --------------------
 @login_required
 def upload_document(request, business_id):
-    business = get_object_or_404(Business, pk=business_id, created_by=request.user)
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=business_id)
+    else:
+        business = get_object_or_404(Business, pk=business_id, created_by=request.user)
     if request.method == 'POST':
         form = DocumentUploadForm(request.POST, request.FILES)
         if form.is_valid():
@@ -138,32 +147,44 @@ def upload_document(request, business_id):
 
 @login_required
 def documents_list(request, business_id):
-    business = get_object_or_404(Business, pk=business_id, created_by=request.user)
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=business_id)
+    else:
+        business = get_object_or_404(Business, pk=business_id, created_by=request.user)
     docs = business.documents.all().order_by('-uploaded_at')
     return render(request, 'core/documents_list.html', {'business': business, 'documents': docs})
 
 
 @login_required
 def document_detail(request, pk):
-    doc = get_object_or_404(Document, pk=pk, business__created_by=request.user)
+    if request.user.is_superuser:
+        doc = get_object_or_404(Document, pk=pk)
+    else:
+        doc = get_object_or_404(Document, pk=pk, business__created_by=request.user)
     lines = doc.lines.all()
     vouchers = doc.vouchers.all().prefetch_related('entries__account')
     
-    # Advanced Dashboard Metrics
-    total_val = sum(v.total_amount for v in vouchers)
-    match_count = lines.exclude(ledger_account__icontains='Suspense').count()
-    knockoff_count = vouchers.filter(entries__ref_type='AGST').distinct().count()
+    # Financial Analytics (Business-wide)
+    cfo_summary = CFOService.get_executive_summary(doc.business)
+    
+    # Document-specific metrics
+    doc_total = sum((v.total_amount for v in vouchers), Decimal('0.00'))
+    processed_count = lines.exclude(ledger_account__icontains='Pending').count()
     
     context = {
         'doc': doc, 
+        'business': doc.business,
         'lines': lines, 
         'vouchers': vouchers,
         'metrics': {
-            'total_value': total_val,
-            'match_count': match_count,
-            'knockoff_count': knockoff_count,
-            'reliability': 94 if doc.is_processed else 0
-        }
+            'total_value': float(doc_total),
+            'match_count': processed_count,
+            'reliability': 94 if doc.status == 'processed' else 0,
+            'burn_rate': float(cfo_summary['burn_rate']),
+            'tax_savings': float(cfo_summary['tax_savings']),
+            'business_pl': float(cfo_summary['net_profit_loss'])
+        },
+        'cfo': cfo_summary
     }
     return render(request, 'core/document_detail.html', context)
 

@@ -10,6 +10,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=Csv())
+CSRF_TRUSTED_ORIGINS = [f"http://{host}:8000" for host in ALLOWED_HOSTS] + [f"https://{host}" for host in ALLOWED_HOSTS]
 
 INSTALLED_APPS = [
     'django.contrib.admin',

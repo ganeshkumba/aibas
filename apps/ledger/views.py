@@ -2,29 +2,65 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from apps.common.views.base import ApiView
-from .models import Voucher, Account, AccountGroup, FinancialYear
+from .models import Voucher, Account, AccountGroup, FinancialYear, JournalEntry
 from core.models import Business
 from .services.ledger_service import LedgerService
 from decimal import Decimal
+from django.db.models import Sum
 import json
 
 @login_required
 def day_book_view(request, biz_pk):
-    business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
-    vouchers = Voucher.objects.filter(business=business).order_by('-date', '-created_at').prefetch_related('entries__account')
-    return render(request, 'ledger/daybook.html', {'business': business, 'vouchers': vouchers})
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    
+    # Chronological is usually ascending for a Day Book
+    vouchers = Voucher.objects.filter(business=business).order_by('date', 'created_at').prefetch_related('entries__account')
+    
+    # Calculate totals
+    total_dr = JournalEntry.objects.filter(voucher__business=business).aggregate(Sum('debit'))['debit__sum'] or 0
+    total_cr = JournalEntry.objects.filter(voucher__business=business).aggregate(Sum('credit'))['credit__sum'] or 0
+    
+    return render(request, 'ledger/daybook.html', {
+        'business': business, 
+        'vouchers': vouchers,
+        'total_dr': total_dr,
+        'total_cr': total_cr
+    })
 
 @login_required
 def trial_balance_view(request, biz_pk):
-    business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    
+    # Elite CFO Strategy: Use aggregation for massive performance gains
+    # Calculate all balances in a single pass
+    balances = JournalEntry.objects.filter(
+        voucher__business=business, 
+        voucher__is_draft=False
+    ).values('account_id').annotate(
+        dr_total=Sum('debit'),
+        cr_total=Sum('credit')
+    )
+    
+    # Map for easy lookup
+    bal_map = {b['account_id']: (b['dr_total'] or Decimal('0')) - (b['cr_total'] or Decimal('0')) for b in balances}
+    
     accounts = Account.objects.filter(business=business).select_related('group')
     
     report_data = []
-    total_dr = Decimal('0')
-    total_cr = Decimal('0')
+    total_dr = Decimal('0.00')
+    total_cr = Decimal('0.00')
     
     for acc in accounts:
-        bal = LedgerService.get_account_balance(acc.id, business=business)
+        # Get balance from map or use 0
+        movement = bal_map.get(acc.id, Decimal('0'))
+        bal = acc.opening_balance + movement
+        
         if bal != 0:
             dr = bal if bal > 0 else 0
             cr = -bal if bal < 0 else 0
@@ -48,7 +84,10 @@ def trial_balance_view(request, biz_pk):
 
 @login_required
 def profit_loss_view(request, biz_pk):
-    business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
     
     # 1. Income
     income_accounts = Account.objects.filter(business=business, group__classification='INCOME')
@@ -83,35 +122,51 @@ def profit_loss_view(request, biz_pk):
 
 @login_required
 def balance_sheet_view(request, biz_pk):
-    business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
     
-    # Assets
+    # 1. Assets
     asset_accounts = Account.objects.filter(business=business, group__classification='ASSET')
     assets = []
-    total_assets = Decimal('0')
+    total_assets = Decimal('0.00')
+    from django.db.models import Sum
     for acc in asset_accounts:
-        bal = LedgerService.get_account_balance(acc.id, business=business)
+        # Use only Posted entries for Balance Sheet integrity
+        entries = JournalEntry.objects.filter(account=acc, voucher__is_draft=False)
+        totals = entries.aggregate(dr=Sum('debit'), cr=Sum('credit'))
+        bal = acc.opening_balance + (totals['dr'] or Decimal('0.00')) - (totals['cr'] or Decimal('0.00'))
+        
         if bal != 0:
             assets.append({'name': acc.name, 'amount': bal})
             total_assets += bal
             
-    # Liabilities
+    # 2. Liabilities & Equity
     liab_accounts = Account.objects.filter(business=business, group__classification__in=['LIABILITY', 'EQUITY'])
     liabilities = []
-    total_liabilities = Decimal('0')
+    total_liabilities = Decimal('0.00')
     for acc in liab_accounts:
-        bal = -LedgerService.get_account_balance(acc.id, business=business)
+        entries = JournalEntry.objects.filter(account=acc, voucher__is_draft=False)
+        totals = entries.aggregate(dr=Sum('debit'), cr=Sum('credit'))
+        bal = - (acc.opening_balance + (totals['dr'] or Decimal('0.00')) - (totals['cr'] or Decimal('0.00')))
+        
         if bal != 0:
             liabilities.append({'name': acc.name, 'amount': bal})
             total_liabilities += bal
             
-    # Also include Net Profit in Liabilities (Capital) side
-    # Calculate P&L for this year (simplified)
-    # We should probably have a more robust way to get P&L, 
-    # but for now we'll redo the calculation or use a helper.
-    from core.processor import generate_business_summary
-    summary = generate_business_summary(business)
-    net_profit = summary['net_profit']
+    # 3. Incorporate Net Profit/Loss (Elite CFO Standard)
+    income_val = JournalEntry.objects.filter(
+        account__business=business, account__group__classification='INCOME', 
+        voucher__is_draft=False
+    ).aggregate(net=Sum('credit') - Sum('debit'))['net'] or Decimal('0.00')
+    
+    expense_val = JournalEntry.objects.filter(
+        account__business=business, account__group__classification='EXPENSE', 
+        voucher__is_draft=False
+    ).aggregate(net=Sum('debit') - Sum('credit'))['net'] or Decimal('0.00')
+    
+    net_profit = income_val - expense_val
     total_liabilities += net_profit
 
     return render(request, 'ledger/balance_sheet.html', {

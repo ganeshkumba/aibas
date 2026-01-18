@@ -140,7 +140,7 @@ class LedgerService:
         return voucher
 
     @staticmethod
-    def get_or_create_suspense(business):
+    def get_or_create_pending_classification(business):
         group, _ = AccountGroup.objects.get_or_create(
             business=business, 
             name="Current Liabilities",
@@ -148,10 +148,33 @@ class LedgerService:
         )
         acc, _ = Account.objects.get_or_create(
             business=business,
-            name="Suspense Account",
-            group=group
+            name="Pending Classification",
+            group=group,
+            defaults={'help_text': 'Used for settlements awaiting invoice identification (Elite CFO Standard)'}
         )
         return acc
+
+    @staticmethod
+    def initialize_financial_year(business):
+        """
+        Creates the current financial year (April to March) for the business.
+        """
+        today = datetime.date.today()
+        # Indian FY: starts April 1st.
+        if today.month >= 4:
+            start_date = datetime.date(today.year, 4, 1)
+            end_date = datetime.date(today.year + 1, 3, 31)
+        else:
+            start_date = datetime.date(today.year - 1, 4, 1)
+            end_date = datetime.date(today.year, 3, 31)
+            
+        fy, created = FinancialYear.objects.get_or_create(
+            business=business,
+            start_date=start_date,
+            end_date=end_date,
+            defaults={'is_locked': False}
+        )
+        return fy
 
     @staticmethod
     def initialize_standard_coa(business):
@@ -238,14 +261,14 @@ class LedgerService:
     def get_accounting_health_checks(business):
         checks = []
         
-        # 1. Suspense Audit
-        suspense = LedgerService.get_or_create_suspense(business)
-        bal = LedgerService.get_account_balance(suspense.id)
+        # 1. Pending Classification Audit (Elite CFO Protocol)
+        pending_acc = LedgerService.get_or_create_pending_classification(business)
+        bal = LedgerService.get_account_balance(pending_acc.id)
         if abs(bal) > 0.01:
             checks.append({
                 'severity': 'ERROR',
-                'message': f"Suspense Account is not zero (₹{bal}). This indicates unresolved cash movements or reclassified entries.",
-                'code': 'SUSPENSE_RESIDUAL'
+                'message': f"Pending Classification is not zero (₹{bal}). This indicates unresolved cash movements in bank statements needing invoice reconciliation.",
+                'code': 'PENDING_RESIDUAL'
             })
 
         # 2. Duplicate Detection
@@ -279,14 +302,14 @@ class LedgerService:
     @transaction.atomic
     def repair_all_vouchers(business):
         """
-        CA-Grade Point: 'Regenerate' correct books.
-        Audits existing vouchers and auto-corrects them to follow GAAP.
+        Elite CFO Protocol: Reset existing accounting data to GAAP-compliance.
+        Enforces strict Point 1 boundaries.
         """
         vouchers = Voucher.objects.filter(business=business)
         corrections = []
         
-        # Pre-initialize Suspense
-        suspense = LedgerService.get_or_create_suspense(business)
+        # Pre-initialize Pending Classification
+        pending_acc = LedgerService.get_or_create_pending_classification(business)
         
         for v in vouchers:
             v_type = v.voucher_type
@@ -297,7 +320,7 @@ class LedgerService:
                 for entry in v_entries:
                     if entry.debit > 0 and entry.account.classification == 'EXPENSE':
                         old_name = entry.account.name
-                        entry.account = suspense
+                        entry.account = pending_acc
                         entry.save()
                         
                         v.narration = f"{v.narration} [REPAIRED: Moved {old_name} debit to Suspense (GAAP Violation)]".strip()

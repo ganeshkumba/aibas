@@ -29,7 +29,8 @@ class AutomationService:
         account, _ = Account.objects.get_or_create(
             business=business,
             name=name,
-            group=group
+            group=group,
+            defaults={'classification': group.classification}
         )
         return account
 
@@ -43,17 +44,26 @@ class AutomationService:
         if not lines.exists():
             return None
 
-        doc_date = document.document_date or (lines[0].date if lines.exists() else None)
+        doc_date = document.document_date or (lines[0].date if lines.exists() else None) or datetime.date.today()
+        
         fy = FinancialYear.objects.filter(
             business=document.business, start_date__lte=doc_date, end_date__gte=doc_date
         ).first()
 
         if not fy:
+            # Fallback to current year if no match
             from datetime import date
-            fy = FinancialYear.objects.create(
+            if doc_date.month >= 4:
+                start_date = date(doc_date.year, 4, 1)
+                end_date = date(doc_date.year + 1, 3, 31)
+            else:
+                start_date = date(doc_date.year - 1, 4, 1)
+                end_date = date(doc_date.year, 3, 31)
+                
+            fy, _ = FinancialYear.objects.get_or_create(
                 business=document.business,
-                start_date=date(doc_date.year, 4, 1),
-                end_date=date(doc_date.year + 1, 3, 31)
+                start_date=start_date,
+                end_date=end_date
             )
 
         if document.doc_type == 'bank':
@@ -86,24 +96,26 @@ class AutomationService:
             # 1. Try to find a Creditor/Debtor
             party_account = None
             
-            # Keyword matching now maps to Vendors (Sundry Creditors) for Payments
+            # Elite CFO Pattern Mapping: Professional Ledger Logic
             vendor_map = {
-                'AWS': 'Amazon Web Services',
-                'GOOGLE': 'Google Cloud India',
-                'SWIGGY': 'Bundl Technologies',
-                'RENT': 'Office Landlord',
-                'SALARY': 'Staff Salary Payable',
+                'AWS': ('Amazon Web Services', 'Sundry Creditors'),
+                'GOOGLE': ('Google Cloud India', 'Sundry Creditors'),
+                'SWIGGY': ('Bundl Technologies', 'Sundry Creditors'),
+                'RENT': ('Office Landlord', 'Sundry Creditors'),
+                'SALARY': ('Staff Salary Payable', 'Current Liabilities'),
+                'ZOMATO': ('Zomato Limited', 'Sundry Creditors'),
+                'PETROL': ('Fuel Expenses', 'Indirect Expenses'),
+                'CONVEYANCE': ('Conveyance Account', 'Indirect Expenses'),
             }
             
-            for key, vendor in vendor_map.items():
+            for key, (vendor, group) in vendor_map.items():
                 if key in desc:
-                    party_group = "Sundry Creditors" if is_debit else "Sundry Debtors"
-                    party_account = cls.get_or_create_default_account(document.business, vendor, party_group)
+                    party_account = cls.get_or_create_default_account(document.business, vendor, group)
                     break
             
             if not party_account:
-                # Rule: If payment is unidentified, it MUST go to Suspense
-                party_account = LedgerService.get_or_create_suspense(document.business)
+                # Rule: Suspense is Forbidden. Map to 'Pending Classification' instead of generic Suspense
+                party_account = cls.get_or_create_default_account(document.business, "Pending Classification", "Current Liabilities")
 
             if is_debit:
                 # Dr Party (Settlement), Cr Bank
@@ -118,7 +130,7 @@ class AutomationService:
                 'voucher_type': v_type,
                 'date': line.date or document.document_date,
                 'fy_id': fy.id,
-                'narration': f"Settlement: {line.description}",
+                'narration': f"Bank Ref: {line.invoice_no or 'N/A'} | Settlement for {line.description}",
                 'is_draft': True,
                 'utr_number': line.invoice_no,
                 'document_id': document.id
@@ -156,23 +168,34 @@ class AutomationService:
             expense_group = "Indirect Expenses" if is_purchase else "Indirect Incomes"
             expense_acc = cls.get_or_create_default_account(document.business, line.ledger_account or "Purchase Ledger", expense_group)
             
-            # Back-calculate Tax (Rule 6: GST != Expense)
+            # Statutory GST Logic: Elite CFO Split (Point 2)
             gst_rate_str = (line.gst_rate or "0").replace('%', '')
             try:
                 gst_pct = Decimal(gst_rate_str)
             except:
                 gst_pct = Decimal('0')
             
-            base_amount = line.amount / (1 + (gst_pct/100))
-            tax_total = line.amount - base_amount
+            base_amount = (line.amount / (1 + (gst_pct/100))).quantize(Decimal('0.01'))
+            tax_total = (line.amount - base_amount).quantize(Decimal('0.01'))
 
             # Dr Expense
             entries_data.append({'account_id': expense_acc.id, 'debit': base_amount if is_purchase else 0, 'credit': 0 if is_purchase else base_amount})
 
-            # Rule 6: Input GST -> Asset (Liability side but debit balance)
+            # GST Splitting (CGST/SGST vs IGST)
             if tax_total > 0:
-                tax_acc = cls.get_or_create_default_account(document.business, f"Input GST {gst_pct}%", "Duties & Taxes")
-                entries_data.append({'account_id': tax_acc.id, 'debit': tax_total if is_purchase else 0, 'credit': 0 if is_purchase else tax_total})
+                is_interstate = (line.place_of_supply or "").upper() != (document.business.state or "").upper()
+                
+                if is_interstate:
+                    tax_acc = cls.get_or_create_default_account(document.business, f"Input IGST {gst_pct}%", "Duties & Taxes")
+                    entries_data.append({'account_id': tax_acc.id, 'debit': tax_total if is_purchase else 0, 'credit': 0 if is_purchase else tax_total})
+                else:
+                    cgst_acc = cls.get_or_create_default_account(document.business, f"Input CGST {(gst_pct/2).quantize(Decimal('0.1'))}%", "Duties & Taxes")
+                    sgst_acc = cls.get_or_create_default_account(document.business, f"Input SGST {(gst_pct/2).quantize(Decimal('0.1'))}%", "Duties & Taxes")
+                    half_tax = (tax_total / 2).quantize(Decimal('0.01'))
+                    # Ensure rounding doesn't cause imbalance
+                    other_half = tax_total - half_tax 
+                    entries_data.append({'account_id': cgst_acc.id, 'debit': half_tax if is_purchase else 0, 'credit': 0 if is_purchase else half_tax})
+                    entries_data.append({'account_id': sgst_acc.id, 'debit': other_half if is_purchase else 0, 'credit': 0 if is_purchase else other_half})
 
         # Cr Creditor (Creating Payable)
         entries_data.append({
@@ -180,14 +203,16 @@ class AutomationService:
             'debit': 0 if is_purchase else total_amount, 
             'credit': total_amount if is_purchase else 0,
             'ref_type': 'NEW',
-            'ref_number': getattr(document, 'document_number', f"INV-{document.id}")
+            'ref_number': line.invoice_no or getattr(document, 'document_number', f"INV-{document.id}")
         })
 
+        # Elite Audit Narrations (Point 4)
+        tax_info = f"GST {gst_pct}%" if gst_pct > 0 else "Exempt/Non-GST"
         voucher_data = {
             'voucher_type': v_type,
             'date': document.document_date or lines[0].date,
             'fy_id': fy.id,
-            'narration': f"Event: {document.doc_type} generated purchase",
+            'narration': f"Inv No: {line.invoice_no or 'N/A'} | Date: {document.document_date} | Vendor: {vendor_name} | {tax_info}",
             'is_draft': True,
             'document_id': document.id
         }
