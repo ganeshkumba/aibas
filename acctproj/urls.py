@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('ledger/', include('apps.ledger.urls')),
     path('', include('core.urls')),
 ]
 

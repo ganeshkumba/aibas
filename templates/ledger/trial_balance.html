@@ -1,0 +1,93 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="card" style="border-bottom: 3px solid var(--fb-blue);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1 style="margin-bottom: 0.25rem;">Trial Balance</h1>
+            <div class="small" style="color: var(--text-secondary); font-weight: 700;">{{ business.name }} | Statement
+                of Ledger Balances</div>
+        </div>
+        <div style="text-align: right;">
+            <div class="small" style="font-weight: 800; color: var(--text-secondary);">STATUS</div>
+            {% if total_dr == total_cr %}<span class="tag tag-success">Balanced</span>{% else %}<span class="tag"
+                style="background: #fb0202; color: white;">Unbalanced</span>{% endif %}
+        </div>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background: var(--fb-blue); color: white; text-align: left;">
+                <th style="padding: 1rem; border: 1px solid rgba(255,255,255,0.1);">Particulars (Ledger Accounts)</th>
+                <th style="padding: 1rem; border: 1px solid rgba(255,255,255,0.1); width: 25%;">Group Case</th>
+                <th style="padding: 1rem; border: 1px solid rgba(255,255,255,0.1); text-align: right; width: 15%;">Debit
+                    (₹)</th>
+                <th style="padding: 1rem; border: 1px solid rgba(255,255,255,0.1); text-align: right; width: 15%;">
+                    Credit (₹)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in report_data %}
+            <tr>
+                <td
+                    style="padding: 0.8rem 1rem; border: 1px solid var(--border-classic); font-weight: 700; color: #1c1e21;">
+                    {{ item.account.name }}</td>
+                <td
+                    style="padding: 0.8rem 1rem; border: 1px solid var(--border-classic); color: var(--text-secondary);">
+                    {{ item.account.group.name }}</td>
+                <td style="padding: 0.8rem 1rem; border: 1px solid var(--border-classic); text-align: right;"
+                    class="ledger-number">{% if item.debit > 0 %}{{ item.debit|floatformat:2 }}{% endif %}</td>
+                <td style="padding: 0.8rem 1rem; border: 1px solid var(--border-classic); text-align: right;"
+                    class="ledger-number">{% if item.credit > 0 %}{{ item.credit|floatformat:2 }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr style="background: #f0f2f5; font-weight: 900;">
+                <td colspan="2" style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right;">GRAND
+                    TOTAL</td>
+                <td style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right; color: var(--fb-blue);"
+                    class="ledger-number">₹{{ total_dr|floatformat:2 }}</td>
+                <td style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right; color: var(--fb-blue);"
+                    class="ledger-number">₹{{ total_cr|floatformat:2 }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    {% if health_checks %}
+    <div style="margin-top: 2rem;">
+        <h3 style="font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1rem;">
+            System Audit & Health Checks</h3>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for check in health_checks %}
+            {% if check.severity == 'CRITICAL' %}
+            <div
+                style="padding: 1rem; border-radius: 6px; display: flex; align-items: flex-start; gap: 1rem; background: #fff1f0; border: 1px solid #ffa39e; color: #cf1322;">
+                {% elif check.severity == 'ERROR' %}
+                <div
+                    style="padding: 1rem; border-radius: 6px; display: flex; align-items: flex-start; gap: 1rem; background: #fff2e8; border: 1px solid #ffbb96; color: #d4380d;">
+                    {% else %}
+                    <div
+                        style="padding: 1rem; border-radius: 6px; display: flex; align-items: flex-start; gap: 1rem; background: #feffe6; border: 1px solid #fffb8f; color: #856404;">
+                        {% endif %}
+                        <span style="font-size: 1.2rem;">{% if check.severity == 'CRITICAL' %}🚫{% elif check.severity
+                            == 'ERROR' %}⚠️{% else %}💡{% endif %}</span>
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">{{
+                                check.severity }}</div>
+                            <div class="small" style="font-weight: 500;">{{ check.message }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if total_dr != total_cr %}
+            <div style="margin-top: 1rem; padding: 1rem; background: #fff1f0; border: 1px solid #ffa39e; border-radius: 4px; color: #cf1322;"
+                class="small">
+                <strong>Difference in Trial Balance:</strong> Ledger is currently unbalanced. Please review unposted AI
+                drafts.
+            </div>
+            {% endif %}
+        </div>
+        {% endblock %}

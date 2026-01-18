@@ -103,7 +103,7 @@ class DocumentAdmin(admin.ModelAdmin):
 class ExtractedLineItemAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'document', 'vendor',
-        'amount', 'tax_amount',
+        'debit', 'credit', 'balance',
         'ledger_account', 'is_verified'
     )
 

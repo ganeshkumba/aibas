@@ -1,11 +1,26 @@
 {% extends 'core/base.html' %}
 {% block content %}
-  <div class="card">
-    <h2>Upload Document for {{ business.name }}</h2>
-    <form method="post" enctype="multipart/form-data">{% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit">Upload</button>
-    </form>
-    <p class="small">Supported image types: jpg, png, tiff. PDFs: not automatically OCRed in MVP.</p>
-  </div>
+<div class="card">
+  <h2>Upload Documents for {{ business.name }}</h2>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div style="margin-bottom: 1.5rem;">
+      <label for="id_doc_type">Document Type:</label>
+      {{ form.doc_type }}
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <label for="id_file">Select Files (Multiple allowed):</label>
+      <input type="file" name="file" id="id_file" multiple accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp" required>
+    </div>
+
+    <button type="submit" class="btn">Upload All Files</button>
+  </form>
+
+  <p class="small" style="margin-top: 1rem;">
+    💡 You can select multiple files at once (Ctrl+Click or Shift+Click).
+    Supported formats: PDF, JPG, PNG, TIFF, BMP
+  </p>
+</div>
 {% endblock %}

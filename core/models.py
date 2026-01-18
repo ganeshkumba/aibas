@@ -30,6 +30,7 @@ class Business(models.Model):
         max_length=20,
         blank=True,
         null=True,
+        unique=True,
         validators=[RegexValidator(
             r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$',
             'Invalid GSTIN format'
@@ -61,6 +62,10 @@ class Business(models.Model):
         related_name='owned_businesses',
         help_text="Actual business owner / client"
     )
+
+    # Added for Tally & Tax logic
+    state = models.CharField(max_length=100, blank=True, null=True, help_text="Company's registered state (for GST POS logic)")
+    address = models.TextField(blank=True, null=True)
 
     BUSINESS_STATUS = [
         ('onboarding', 'Onboarding'), # Just joined
@@ -145,13 +150,18 @@ class Document(models.Model):
 
     # Has the AI finished reading this?
     is_processed = models.BooleanField(default=False)
+    
+    # Advanced Tally Integration
+    is_synced_to_tally = models.BooleanField(default=False)
+    synced_at = models.DateTimeField(null=True, blank=True)
+    sync_log = models.TextField(blank=True, null=True)
 
-    # A unique fingerprint of the file. 
-    # If you try to upload the same photo twice, the system catches it here.
     checksum = models.CharField(
         max_length=64, blank=True, null=True,
         help_text="Used to detect duplicate uploads"
     )
+
+    extraction_errors = models.JSONField(default=dict, blank=True, help_text="List of issues found during AI processing")
 
     class Meta:
         ordering = ['-uploaded_at']
@@ -184,6 +194,9 @@ class ExtractedLineItem(models.Model):
     
     # Money details
     amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True) # Total price
+    debit = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    credit = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    balance = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
     tax_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True) # Taxes paid
     gst_rate = models.CharField(max_length=20, blank=True, null=True) # % of tax
     
@@ -193,6 +206,12 @@ class ExtractedLineItem(models.Model):
     # Which "Category" this belongs to in the ledger (e.g., "Office Supplies")
     ledger_account = models.CharField(max_length=100, blank=True, null=True)
     
+    # Added for Tally & Tax logic
+    description = models.TextField(blank=True, null=True)
+    hsn_code = models.CharField(max_length=20, blank=True, null=True)
+    place_of_supply = models.CharField(max_length=100, blank=True, null=True)
+    vendor_gstin = models.CharField(max_length=20, blank=True, null=True)
+
     # A copy of the "Raw data" from the AI in case we need more details later
     raw = models.JSONField(default=dict, blank=True)
 

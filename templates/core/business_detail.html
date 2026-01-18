@@ -1,11 +1,130 @@
 {% extends 'core/base.html' %}
 {% block content %}
-  <div class="card">
-    <h2>{{ business.name }}</h2>
-    <div class="small">GSTIN: {{ business.gstin }} • PAN: {{ business.pan }}</div>
-    <div style="margin-top:10px;">
-      <a href="{% url 'core:upload_document' business.id %}"><button>Upload Document</button></a>
-      <a href="{% url 'core:documents_list' business.id %}"><button>View Documents</button></a>
+<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 2rem;">
+  <div>
+    <h1 style="margin:0; font-family: 'Playfair Display', serif; font-size: 2.2rem;">{{ business.name }}</h1>
+    <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 1rem;">
+      <span class="tag tag-info" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ business.gstin }}</span>
+      <span class="small" style="color: var(--text-secondary); font-weight: 600;">
+        {{ business.state|default:"Federal Jurisdiction" }}
+      </span>
     </div>
   </div>
+  <div style="display: flex; gap: 0.75rem;">
+    <a href="{% url 'ledger:tally-export' %}?business_id={{ business.id }}" class="btn btn-secondary"
+      style="display: flex; align-items: center; gap: 0.5rem;">
+      <svg style="width:1rem; height:1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+      </svg>
+      Export XML
+    </a>
+    <a href="{% url 'core:upload_document' business.id %}" class="btn">New Deposit / Entry</a>
+  </div>
+</div>
+
+<!-- Financial Status Grid -->
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+  <div class="card"
+    style="border-top: 4px solid var(--old-money-gold); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="small"
+      style="font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem;">Assets &
+      Income</div>
+    <div class="ledger-number" style="font-size: 1.75rem; color: #1e3a8a;">
+      ₹{{ summary.total_income|floatformat:2 }}
+    </div>
+  </div>
+  <div class="card"
+    style="border-top: 4px solid #c0392b; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="small"
+      style="font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem;">
+      Liabilities & Expense</div>
+    <div class="ledger-number" style="font-size: 1.75rem; color: #7f1d1d;">
+      ₹{{ summary.total_expense|floatformat:2 }}
+    </div>
+  </div>
+  <div class="card"
+    style="border-top: 4px solid var(--fb-blue); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div class="small"
+      style="font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem;">Net
+      Capital / Profit</div>
+    <div class="ledger-number" style="font-size: 1.75rem; color: var(--old-money-navy);">
+      ₹{{ summary.net_profit|floatformat:2 }}
+    </div>
+  </div>
+</div>
+
+<!-- Financial Report Suite -->
+<div style="margin-bottom: 2.5rem;">
+  <h3
+    style="margin-bottom: 1rem; color: var(--text-secondary); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; font-weight: 800;">
+    Financial Reports</h3>
+  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+    <a href="{% url 'ledger:day-book' business.id %}" class="card"
+      style="text-decoration: none; padding: 1.2rem; text-align: center; border: 1px solid var(--border-classic); background: white;">
+      <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📖</div>
+      <div style="font-weight: 700; color: var(--fb-blue); font-size: 0.85rem;">Day Book</div>
+    </a>
+    <a href="{% url 'ledger:trial-balance' business.id %}" class="card"
+      style="text-decoration: none; padding: 1.2rem; text-align: center; border: 1px solid var(--border-classic); background: white;">
+      <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚖️</div>
+      <div style="font-weight: 700; color: var(--fb-blue); font-size: 0.85rem;">Trial Balance</div>
+    </a>
+    <a href="{% url 'ledger:profit-loss' business.id %}" class="card"
+      style="text-decoration: none; padding: 1.2rem; text-align: center; border: 1px solid var(--border-classic); background: white;">
+      <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📈</div>
+      <div style="font-weight: 700; color: var(--fb-blue); font-size: 0.85rem;">P & L Account</div>
+    </a>
+    <a href="{% url 'ledger:balance-sheet' business.id %}" class="card"
+      style="text-decoration: none; padding: 1.2rem; text-align: center; border: 1px solid var(--border-classic); background: white;">
+      <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🏛️</div>
+      <div style="font-weight: 700; color: var(--fb-blue); font-size: 0.85rem;">Balance Sheet</div>
+    </a>
+  </div>
+</div>
+
+<!-- Registry Section -->
+<div class="card" style="padding: 0;">
+  <div
+    style="padding: 1.25rem; border-bottom: 1px solid var(--border-classic); display: flex; justify-content: space-between; align-items: center; background: #f5f6f7; border-radius: 8px 8px 0 0;">
+    <h3 style="margin: 0; font-size: 1.1rem; font-family: 'Inter', sans-serif; font-weight: 700;">Document Registry</h3>
+    <a href="{% url 'core:documents_list' business.id %}" class="small"
+      style="color: var(--fb-blue); font-weight: 700;">Full Records →</a>
+  </div>
+  <div style="padding:0">
+    <table style="width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif; font-size: 0.85rem;">
+      <thead style="background: white; border-bottom: 1px solid var(--border-classic);">
+        <tr style="text-align: left; color: var(--text-secondary);">
+          <th style="padding: 0.75rem 1.25rem">Registration Date</th>
+          <th>Classification</th>
+          <th>Reference Identification</th>
+          <th style="text-align: right; padding-right: 1.25rem;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in business.documents.all|slice:":8" %}
+        {% if forloop.counter|divisibleby:2 %}
+        <tr style="border-bottom: 1px solid var(--border-classic); background: #fafbfc; transition: background 0.1s;">
+          {% else %}
+        <tr style="border-bottom: 1px solid var(--border-classic); background: white; transition: background 0.1s;">
+          {% endif %}
+          <td style="padding: 0.85rem 1.25rem; font-weight: 500;">{{ doc.uploaded_at|date:"d F Y" }}</td>
+          <td><span class="tag tag-info" style="font-size: 0.65rem;">{{ doc.get_doc_type_display }}</span></td>
+          <td class="small" style="font-family: monospace; color: var(--text-main);">#{{ doc.id|stringformat:".8s" }}
+          </td>
+          <td style="text-align: right; padding-right: 1.25rem;">
+            <a href="{% url 'core:document_detail' doc.id %}" class="btn btn-secondary"
+              style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">Review Entry</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" style="padding: 3rem; text-align: center; color: var(--text-secondary); font-style: italic;">
+            No records found in this entity's ledger.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

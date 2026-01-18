@@ -25,10 +25,11 @@ class BusinessForm(forms.ModelForm):
 
     class Meta:
         model = Business
-        fields = ['name', 'pan', 'gstin', 'financial_year_start']
+        fields = ['name', 'pan', 'gstin', 'state', 'financial_year_start', 'financial_year_end']
         widgets = {
             'name': forms.TextInput(attrs={'placeholder': 'Business Name'}),
-            'financial_year_start': forms.DateInput(attrs={'type': 'date'}),
+            'financial_year_start': forms.DateInput(attrs={'type': 'date', 'placeholder': 'FY Start (e.g., 01-04-2023)'}),
+            'financial_year_end': forms.DateInput(attrs={'type': 'date', 'placeholder': 'FY End (e.g., 31-03-2024)'}),
         }
 
 

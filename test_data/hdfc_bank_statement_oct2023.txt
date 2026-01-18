@@ -1,0 +1,23 @@
+HDFC BANK
+ACCOUNT STATEMENT
+Account Number: 50100234567890
+Statement Period: October 2023
+Customer Name: Test Business
+Branch: Mumbai Main
+
+================================================================================
+Date        | Description                    | Chq/Ref No    | Withdrawal | Deposit  | Balance
+================================================================================
+01-10-2023  | Opening Balance                |               |            |          | 3,44,150.25
+05-10-2023  | NEFT-AWS Cloud Services        | N287230001    | 10,030.00  |          | 3,34,120.25
+12-10-2023  | CHQ-Office Depot Supplies      | 123456        | 5,900.00   |          | 3,28,220.25
+15-10-2023  | NEFT CR-RECONCILIATION         | N287230045    |            | 1,06,200 | 4,34,420.25
+            | PREV INVOICE                   |               |            |          |
+18-10-2023  | Bank Charges - Consolidated    | -             | 50.00      |          | 4,34,370.25
+20-10-2023  | UPI-Fast Track Couriers        | FTC/23/1056   | 1,200.00   |          | 4,33,170.25
+25-10-2023  | RTGS-Nexus Consulting          | R287230078    | 59,000.00  |          | 3,74,170.25
+30-10-2023  | Interest Credit                | -             |            | 1,205.00 | 3,75,375.25
+================================================================================
+
+End of Statement
+For queries contact: 1800-HDFC-BANK

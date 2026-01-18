@@ -19,7 +19,7 @@ class AIService:
         else:
             self.provider = MockAIProvider()
 
-    def process_document(self, text: str) -> dict:
+    def process_document(self, text: str, doc_type: str = 'receipt') -> dict:
         """
         Takes OCR text and returns structured data using the configured provider.
         """
@@ -28,10 +28,10 @@ class AIService:
                 "vendor": None,
                 "invoice_no": None,
                 "date": None,
-                "amount": None,
-                "gst_rate": None,
-                "tax_amount": None,
+                "total_amount": 0.0,
+                "tax_amount": 0.0,
+                "line_items": [],
                 "confidence": 0.0
             }
 
-        return self.provider.extract(text)
+        return self.provider.extract(text, doc_type=doc_type)
