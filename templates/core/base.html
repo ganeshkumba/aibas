@@ -2,329 +2,371 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <style>
-    :root {
-      --fb-blue: #3b5998;
-      --fb-bg: #f0f2f5;
-      --old-money-navy: #1a2a4b;
-      --old-money-cream: #f8f5f0;
-      --old-money-gold: #c5a059;
-      --text-main: #2d3436;
-      --text-secondary: #606770;
-      --border-classic: #dddfe2;
-      --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ledger | Enterprise Accounting</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Light Theme Variables */
+            --fb-blue: #3b5998;
+            --fb-bg: #f0f2f5;
+            --old-money-navy: #1a2a4b;
+            --old-money-cream: #f8f5f0;
+            --old-money-gold: #c5a059;
+            --text-main: #2d3436;
+            --text-secondary: #606770;
+            --border-classic: #dddfe2;
+            --card-background: #ffffff;
+            --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            --sidebar-active-bg: #ffffff;
+            --btn-secondary-bg: #e4e6eb;
+            --btn-secondary-text: #050505;
+        }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+        [data-theme="dark"] {
+            /* Dark Theme Variables */
+            --fb-blue: #2d4373;
+            --fb-bg: #18191a;
+            --old-money-navy: #e4e6eb;
+            --old-money-cream: #242526;
+            --old-money-gold: #c5a059;
+            --text-main: #e4e6eb;
+            --text-secondary: #b0b3b8;
+            --border-classic: #3e4042;
+            --card-background: #242526;
+            --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --sidebar-active-bg: #3a3b3c;
+            --btn-secondary-bg: #3a3b3c;
+            --btn-secondary-text: #e4e6eb;
+        }
 
-    body {
-      font-family: 'Libre Baskerville', serif;
-      background-color: var(--fb-bg);
-      color: var(--text-main);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
 
-    nav {
-      background-color: var(--fb-blue);
-      padding: 0.5rem 0;
-      display: flex;
-      justify-content: center;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--fb-bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
 
-    .nav-container {
-      width: 100%;
-      max-width: 1012px;
-      padding: 0 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+        nav {
+            background-color: var(--fb-blue);
+            padding: 0.5rem 0;
+            display: flex;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
 
-    .logo {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.8rem;
-      font-weight: 900;
-      color: white;
-      text-decoration: none;
-      letter-spacing: -0.5px;
-    }
+        .nav-container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 0 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .logo span {
-      font-size: 0.8rem;
-      font-family: 'Inter', sans-serif;
-      font-weight: 500;
-      vertical-align: middle;
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-left: 10px;
-    }
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
 
-    .container {
-      max-width: 1012px;
-      margin: 1.5rem auto;
-      padding: 0 1rem;
-      display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 1.5rem;
-    }
+        .logo span {
+            font-size: 0.7rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            vertical-align: middle;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+            text-transform: uppercase;
+        }
 
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 2rem;
+        }
 
-    .sidebar a {
-      font-family: 'Inter', sans-serif;
-      text-decoration: none;
-      color: var(--text-main);
-      font-size: 0.85rem;
-      padding: 0.6rem 0.75rem;
-      border-radius: 6px;
-      transition: background 0.2s;
-      font-weight: 500;
-    }
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
 
-    .sidebar a:hover {
-      background: rgba(0, 0, 0, 0.05);
-    }
+        .sidebar a {
+            text-decoration: none;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
 
-    .sidebar a.active {
-      background: white;
-      font-weight: 700;
-      border: 1px solid var(--border-classic);
-    }
+        .sidebar a:hover {
+            background: rgba(128, 128, 128, 0.1);
+        }
 
-    .sidebar-section {
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      padding: 0.75rem 0.75rem 0.25rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+        .sidebar a.active {
+            background: var(--sidebar-active-bg);
+            font-weight: 700;
+            color: var(--fb-blue);
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-classic);
+        }
 
-    .main-content {
-      min-width: 0;
-    }
+        .sidebar-section {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            padding: 1rem 1rem 0.25rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-    .btn {
-      background: var(--fb-blue);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
-      text-decoration: none;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.9rem;
-      transition: background 0.2s;
-      border: none;
-      cursor: pointer;
-      display: inline-block;
-    }
+        .main-content {
+            min-width: 0;
+        }
 
-    .btn:hover {
-      background: #2d4373;
-    }
+        .btn {
+            background: var(--fb-blue);
+            color: white;
+            padding: 0.6rem 1.25rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+        }
 
-    .btn-secondary {
-      background: #e4e6eb;
-      color: #050505;
-    }
+        .btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
 
-    .btn-secondary:hover {
-      background: #d8dadf;
-    }
+        .btn-secondary {
+            background: var(--btn-secondary-bg);
+            color: var(--btn-secondary-text);
+        }
 
-    .card {
-      background: white;
-      border: 1px solid var(--border-classic);
-      border-radius: 8px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      box-shadow: var(--card-shadow);
-    }
+        .btn-secondary:hover {
+            filter: brightness(0.9);
+        }
 
-    .ledger-number {
-      font-family: 'Inter', sans-serif;
-      font-variant-numeric: tabular-nums;
-      font-weight: 600;
-      color: #334155;
-    }
+        .card {
+            background: var(--card-background);
+            border: 1px solid var(--border-classic);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+        }
 
-    h1,
-    h2,
-    h3 {
-      font-family: 'Playfair Display', serif;
-      margin-bottom: 1rem;
-      color: var(--old-money-navy);
-    }
+        .ledger-number {
+            font-family: 'Inter', sans-serif;
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+        }
 
-    .nav-links {
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-    }
+        h1, h2, h3 {
+            font-family: 'Playfair Display', serif;
+            color: var(--old-money-navy);
+            margin-bottom: 1rem;
+        }
 
-    .nav-links a {
-      color: white;
-      font-family: 'Inter', sans-serif;
-      text-decoration: none;
-      font-size: 0.85rem;
-      font-weight: 600;
-      opacity: 0.9;
-    }
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
 
-    .nav-links a:hover {
-      opacity: 1;
-      text-decoration: underline;
-    }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            opacity: 0.85;
+            transition: opacity 0.2s;
+        }
 
-    input,
-    select,
-    textarea {
-      font-family: 'Inter', sans-serif;
-      background: #f0f2f5;
-      border: 1px solid #ced4da;
-      border-radius: 6px;
-      padding: 0.75rem 1rem;
-      width: 100%;
-      margin-top: 0.5rem;
-      margin-bottom: 1.25rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
+        .nav-links a:hover {
+            opacity: 1;
+        }
 
-    input:focus {
-      border-color: var(--fb-blue);
-      box-shadow: 0 0 0 2px rgba(59, 89, 152, 0.1);
-    }
+        .tag {
+            font-size: 0.65rem;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
-    .tag {
-      font-family: 'Inter', sans-serif;
-      font-size: 0.7rem;
-      padding: 3px 10px;
-      border-radius: 4px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
+        .tag-info { background: #e7f3ff; color: #1877f2; }
+        .tag-success { background: #e7f3ff; color: #1877f2; }
 
-    .tag-info {
-      background: #e7f3ff;
-      color: #1877f2;
-    }
+        .small {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
 
-    .tag-success {
-      background: #e7f3ff;
-      color: #1877f2;
-    }
+        #theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
+        }
+        
+        #theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
 
-    pre {
-      background: #fbf9f6;
-      padding: 1.25rem;
-      border-radius: 6px;
-      overflow: auto;
-      font-family: 'Courier New', monospace;
-      border: 1px solid var(--border-classic);
-      font-size: 0.8rem;
-      line-height: 1.4;
-      color: var(--text-main);
-      border-left: 4px solid var(--old-money-gold);
-    }
+        [data-theme="dark"] .tag-info, [data-theme="dark"] .tag-success {
+            background: #1877f2;
+            color: white;
+        }
+    </style>
+    <script>
+        // Theme Management Script
+        const setTheme = (theme) => {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const toggleIcon = document.getElementById('theme-icon');
+            const toggleText = document.getElementById('theme-text');
+            if (toggleIcon && toggleText) {
+                toggleIcon.innerText = theme === 'dark' ? '🌙' : '☀️';
+                toggleText.innerText = theme === 'dark' ? 'Dark' : 'Light';
+            }
+        };
 
-    .small {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      font-family: 'Inter', sans-serif;
-    }
-  </style>
+        const toggleTheme = () => {
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            setTheme(currentTheme === 'light' ? 'dark' : 'light');
+        };
+
+        // Initialize theme on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            setTheme(savedTheme);
+        });
+    </script>
 </head>
 
 <body>
-  <nav>
-    <div class="nav-container">
-      <a href="{% url 'core:index' %}" class="logo">The Ledger <span>Est. 2024</span></a>
-      <div class="nav-links">
-        {% if user.is_authenticated %}
-        <a href="{% url 'core:index' %}">News Feed</a>
-        <form action="{% url 'core:logout' %}" method="post" style="display:inline;">{% csrf_token %}
-          <button type="submit" class="btn btn-secondary"
-            style="padding: 0.35rem 0.8rem; font-size:0.75rem; font-weight: 700;">Logout</button>
-        </form>
-        {% else %}
-        <a href="{% url 'core:login' %}">Log In</a>
-        <a href="{% url 'core:signup' %}" class="btn" style="padding: 0.4rem 1rem">Sign Up</a>
-        {% endif %}
-      </div>
+    <nav>
+        <div class="nav-container">
+            <a href="{% url 'core:index' %}" class="logo">The Ledger <span>Est. 2024</span></a>
+            <div class="nav-links">
+                <button id="theme-toggle" onclick="toggleTheme()">
+                    <span id="theme-icon">☀️</span>
+                    <span id="theme-text">Light</span>
+                </button>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'core:index' %}">News Feed</a>
+                    <form action="{% url 'core:logout' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.75rem;">Logout</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'core:login' %}">Log In</a>
+                    <a href="{% url 'core:signup' %}" class="btn">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="sidebar">
+            {% if user.is_authenticated %}
+                <div style="padding: 0.5rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; background: white; border-radius: 12px; border: 1px solid var(--border-classic);">
+                    <div style="width: 36px; height: 36px; background: var(--fb-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-family: 'Playfair Display'; font-size: 1.2rem;">
+                        {{ user.email | slice:":1" | upper }}
+                    </div>
+                    <div style="overflow: hidden;">
+                        <div class="small" style="font-weight: 800; color: #1c1e21; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
+                            {{ user.email }}
+                        </div>
+                        <div style="font-size: 0.6rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Account Active</div>
+                    </div>
+                </div>
+
+                <a href="{% url 'core:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+                    <span>🏠</span> Home Feed
+                </a>
+
+                {% if business %}
+                    <div class="sidebar-section">{{ business.name | truncatechars:20 }}</div>
+                    <a href="{% url 'core:business_detail' business.id %}" class="{% if request.resolver_match.url_name == 'business_detail' %}active{% endif %}">
+                        <span>📊</span> Business Hub
+                    </a>
+                    <a href="{% url 'core:upload_document' business.id %}" class="{% if request.resolver_match.url_name == 'upload_document' %}active{% endif %}">
+                        <span>📤</span> Upload Entry
+                    </a>
+                    <a href="{% url 'core:documents_list' business.id %}" class="{% if request.resolver_match.url_name == 'documents_list' %}active{% endif %}">
+                        <span>📂</span> Audit Vault
+                    </a>
+
+                    <div class="sidebar-section">Accounting Module</div>
+                    <a href="{% url 'ledger:day-book' business.id %}"><span>📓</span> Day Book</a>
+                    <a href="{% url 'ledger:trial-balance' business.id %}"><span>⚖️</span> Trial Balance</a>
+                    <a href="{% url 'ledger:profit-loss' business.id %}"><span>📈</span> Profit & Loss</a>
+                    <a href="{% url 'ledger:balance-sheet' business.id %}"><span>📉</span> Balance Sheet</a>
+                {% else %}
+                    <a href="{% url 'core:business_create' %}"><span>➕</span> Register Business</a>
+                {% endif %}
+
+                <hr style="border: 0; border-top: 1px solid var(--border-classic); margin: 1.5rem 0;">
+                <div class="sidebar-section">Control Panel</div>
+                <a href="#"><span>👤</span> Profile Settings</a>
+                <a href="#"><span>⚙️</span> API Config</a>
+            {% endif %}
+        </div>
+
+        <div class="main-content">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="card" style="border-left: 4px solid var(--old-money-gold); padding: 1rem 1.5rem; margin-bottom: 1.5rem; background: #fffdf9; font-weight: 500;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
     </div>
-  </nav>
-
-  <div class="container">
-    <div class="sidebar">
-      {% if user.is_authenticated %}
-      <div style="padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-        <div
-          style="width: 32px; height: 32px; background: var(--fb-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-family: 'Playfair Display';">
-          {{ user.email|slice:":1"|upper }}</div>
-        <div class="small"
-          style="font-weight: 800; color: #1c1e21; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{
-          user.email }}</div>
-      </div>
-
-      <a href="{% url 'core:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">🏠
-        Home Feed</a>
-
-      {% if business %}
-      <div class="sidebar-section">{{ business.name|truncatechars:18 }}</div>
-      <a href="{% url 'core:business_detail' business.id %}"
-        class="{% if request.resolver_match.url_name == 'business_detail' %}active{% endif %}">📊 Business Overview</a>
-      <a href="{% url 'core:upload_document' business.id %}"
-        class="{% if request.resolver_match.url_name == 'upload_document' %}active{% endif %}">📤 Upload Invoice</a>
-      <a href="{% url 'core:documents_list' business.id %}"
-        class="{% if request.resolver_match.url_name == 'documents_list' %}active{% endif %}">📂 Document Vault</a>
-
-      <div class="sidebar-section">Accounting Stats</div>
-      <a href="{% url 'ledger:day-book' business.id %}">📓 Day Book</a>
-      <a href="{% url 'ledger:trial-balance' business.id %}">⚖️ Trial Balance</a>
-      <a href="{% url 'ledger:profit-loss' business.id %}">📈 Profit & Loss</a>
-      <a href="{% url 'ledger:balance-sheet' business.id %}">📉 Balance Sheet</a>
-      {% else %}
-      <a href="{% url 'core:business_create' %}">➕ New Business</a>
-      {% endif %}
-
-      <hr style="border: 0; border-top: 1px solid var(--border-classic); margin: 1rem 0;">
-      <div class="sidebar-section">Settings</div>
-      <a href="#">👤 My Profile</a>
-      <a href="#">⚙️ Preferences</a>
-      {% endif %}
-    </div>
-
-    <div class="main-content">
-      {% if messages %}{% for message in messages %}
-      <div class="card"
-        style="border-left: 4px solid var(--old-money-gold); padding: 0.75rem 1rem; margin-bottom: 1rem; background: #fffdf9;">
-        {{ message }}</div>
-      {% endfor %}{% endif %}
-      {% block content %}{% endblock %}
-    </div>
-  </div>
 </body>
-
 </html>

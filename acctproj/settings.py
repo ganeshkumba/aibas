@@ -25,8 +25,11 @@ INSTALLED_APPS = [
     'apps.ai_bridge',
 ]
 
-AI_PROVIDER = config('AI_PROVIDER', default='mock')
+AI_PROVIDER = config('AI_PROVIDER', default='ollama')
 OLLAMA_URL = config('OLLAMA_URL', default='http://localhost:11434/api/generate')
+OLLAMA_MODEL = config('OLLAMA_MODEL', default='llama3.1')
+TESSERACT_CMD = config('TESSERACT_CMD', default=r'C:\Program Files\Tesseract-OCR\tesseract.exe')
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

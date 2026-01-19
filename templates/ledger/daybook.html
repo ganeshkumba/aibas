@@ -1,94 +1,95 @@
 {% extends 'core/base.html' %}
-<!-- Template Ver: 1.0.4 -->
-{% block content %}
-<style>
-    .ledger-number {
-        font-family: 'Inter', sans-serif;
-        font-variant-numeric: tabular-nums;
-    }
-</style>
-<div class="card" style="border-bottom: 3px solid var(--old-money-gold);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <div>
-            <h1 style="margin-bottom: 0.25rem;">Day Book</h1>
-            <div class="small" style="color: var(--text-secondary); font-weight: 700;">{{business.name}} | Chronological
-                Transaction Registry</div>
-        </div>
-        <div style="text-align: right;">
-            <a href="{% url 'ledger:tally-export' %}?business_id={{business.id}}" class="btn"
-                style="background: var(--fb-blue); color: white;">Export to Tally XML</a>
-        </div>
-    </div>
 
-    <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-            <tr style="background: #f0f2f5; text-align: left;">
-                <th style="padding: 1rem; border: 1px solid var(--border-classic);">Date</th>
-                <th style="padding: 1rem; border: 1px solid var(--border-classic);">Particulars</th>
-                <th style="padding: 1rem; border: 1px solid var(--border-classic);">Vch Type</th>
-                <th style="padding: 1rem; border: 1px solid var(--border-classic);">Vch No.</th>
-                <th style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right;">Debit Amount</th>
-                <th style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right;">Credit Amount
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for vch in vouchers %}
-            {% for entry in vch.entries.all %}
-            <tr>
-                <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); font-size: 0.85rem;">
-                    {% if forloop.first %}{{vch.date|date:"d-M-Y"}}{% endif %}
-                </td>
-                <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic);">
-                    <div style="font-weight: 700; color: #1c1e21;">{{entry.account.name}}</div>
-                    {% if forloop.last and vch.narration %}
-                    <div class="small" style="color: var(--text-secondary); font-style: italic; margin-top: 0.25rem;">
-                        {{vch.narration}}</div>
-                    {% endif %}
-                </td>
-                <td
-                    style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); font-size: 0.8rem; font-weight: 700;">
-                    {% if forloop.first %}{{vch.get_voucher_type_display}}{% endif %}
-                </td>
-                <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); font-size: 0.85rem;">
-                    {% if forloop.first %}
-                    {{vch.voucher_number}}
-                    {% if vch.is_draft %}
-                    <br><span class="tag"
-                        style="background:#fff7e6;color:#d46b08;border-color:#ffd591;font-size:10px;">DRAFT</span>
-                    {% endif %}
-                    {% endif %}
-                </td>
-                <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); text-align: right;"
-                    class="ledger-number">
-                    {% if entry.debit > 0 %}₹{{entry.debit|floatformat:2}}{% endif %}
-                </td>
-                <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); text-align: right;"
-                    class="ledger-number">
-                    {% if entry.credit > 0 %}₹{{entry.credit|floatformat:2}}{% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-            <tr style="background: #fafafa; border-bottom: 2px solid var(--border-classic);">
-                <td colspan="6" style="height: 5px;"></td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No transactions
-                    recorded for this period.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-        <tfoot style="background: #f0f2f5; font-weight: 800; border-top: 2px solid var(--border-classic);">
-            <tr>
-                <td colspan="4" style="padding: 1rem; text-align: right; border: 1px solid var(--border-classic);">GRAND
-                    TOTALS</td>
-                <td style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right; color: var(--fb-blue);"
-                    class="ledger-number">₹{{total_dr|floatformat:2}}</td>
-                <td style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right; color: var(--fb-blue);"
-                    class="ledger-number">₹{{total_cr|floatformat:2}}</td>
-            </tr>
-        </tfoot>
-    </table>
+{% block content %}
+<div class="card" style="border-bottom: 3px solid var(--old-money-gold);">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+      <h1 style="margin-bottom: 0.25rem;">Day Book</h1>
+      <div class="small" style="color: var(--text-secondary); font-weight: 700;">{{ business.name }} | Chronological Transaction Registry</div>
+    </div>
+    <div style="text-align: right;">
+      <a href="{% url 'ledger:tally-export' %}?business_id={{ business.id }}" class="btn" style="background: var(--fb-blue); color: white;">
+        Export XML
+      </a>
+    </div>
+  </div>
+
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr style="background: #f0f2f5; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
+        <th style="padding: 1rem; border: 1px solid var(--border-classic);">Date</th>
+        <th style="padding: 1rem; border: 1px solid var(--border-classic);">Particulars</th>
+        <th style="padding: 1rem; border: 1px solid var(--border-classic);">Vch Type</th>
+        <th style="padding: 1rem; border: 1px solid var(--border-classic);">Vch No.</th>
+        <th style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right;">Debit (₹)</th>
+        <th style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right;">Credit (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for vch in vouchers %}
+        {% for entry in vch.entries.all %}
+          <tr style="background: white;">
+            <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); font-size: 0.85rem;">
+              {% if forloop.first %}
+                {{ vch.date | date:"d-M-Y" }}
+              {% endif %}
+            </td>
+            <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic);">
+              <div style="font-weight: 700; color: #1c1e21;">{{ entry.account.name }}</div>
+              {% if forloop.last and vch.narration %}
+                <div class="small" style="color: var(--text-secondary); font-style: italic; margin-top: 0.25rem;">
+                  {{ vch.narration }}
+                </div>
+              {% endif %}
+            </td>
+            <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); font-size: 0.8rem; font-weight: 700;">
+              {% if forloop.first %}
+                {{ vch.get_voucher_type_display }}
+              {% endif %}
+            </td>
+            <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); font-size: 0.85rem;">
+              {% if forloop.first %}
+                {{ vch.voucher_number }}
+                {% if vch.is_draft %}
+                  <br>
+                  <span class="tag" style="background: #fff7e6; color: #d46b08; border: 1px solid #ffd591; font-size: 9px;">DRAFT</span>
+                {% endif %}
+              {% endif %}
+            </td>
+            <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); text-align: right;" class="ledger-number">
+              {% if entry.debit > 0 %}
+                {{ entry.debit | floatformat:2 }}
+              {% endif %}
+            </td>
+            <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); text-align: right;" class="ledger-number">
+              {% if entry.credit > 0 %}
+                {{ entry.credit | floatformat:2 }}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        <tr style="background: #fafafa; border-bottom: 2px solid var(--border-classic);">
+          <td colspan="6" style="height: 4px;"></td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="6" style="padding: 4rem; text-align: center; color: var(--text-secondary);">
+            No transactions recorded for this entity.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot style="background: #f0f2f5; font-weight: 800; border-top: 2px solid var(--border-classic);">
+      <tr>
+        <td colspan="4" style="padding: 1rem; text-align: right; border: 1px solid var(--border-classic);">GRAND TOTALS</td>
+        <td style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right; color: var(--fb-blue);" class="ledger-number">
+          ₹{{ total_dr | floatformat:2 }}
+        </td>
+        <td style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right; color: var(--fb-blue);" class="ledger-number">
+          ₹{{ total_cr | floatformat:2 }}
+        </td>
+      </tr>
+    </tfoot>
+  </table>
 </div>
 {% endblock %}

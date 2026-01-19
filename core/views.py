@@ -1,3 +1,5 @@
+import threading
+from django.conf import settings
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import BusinessForm, DocumentUploadForm, SignUpForm, LoginForm
@@ -5,8 +7,9 @@ from .models import Business, Document
 import pytesseract
 from PIL import Image
 from django.contrib.auth import login, logout
-from .processor import process_document, generate_business_summary
-from django.contrib.auth.decorators import login_required
+from .processor import process_document
+from django.contrib.auth.decorators import login_required, login_not_required
+from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.contrib.auth import authenticate
 from django.utils import timezone
@@ -15,6 +18,7 @@ from apps.ledger.services.ledger_service import LedgerService
 from apps.ledger.services.cfo_service import CFOService
 
 # -------------------- AUTH VIEWS --------------------
+@login_not_required
 def signup_view(request):
     if request.method == "POST":
         form = SignUpForm(request.POST)
@@ -27,6 +31,7 @@ def signup_view(request):
     return render(request, "core/signup.html", {"form": form})
 
 
+@login_not_required
 def login_view(request):
     if request.method == "POST":
         form = LoginForm(request, data=request.POST)
@@ -85,7 +90,7 @@ def business_detail(request, pk):
         business = get_object_or_404(Business, pk=pk)
     else:
         business = get_object_or_404(Business, pk=pk, created_by=request.user)
-    summary = generate_business_summary(business)
+    summary = CFOService.get_executive_summary(business)
     return render(request, 'core/business_detail.html', {'business': business, 'summary': summary})
 
 
@@ -112,31 +117,10 @@ def upload_document(request, business_id):
                 )
                 doc.save()
 
-                # OCR / Text Extraction
-                try:
-                    filepath = doc.file.path
-                    text = ""
-                    if filepath.lower().endswith('.pdf'):
-                        import pdfplumber
-                        with pdfplumber.open(filepath) as pdf:
-                            for page in pdf.pages:
-                                text += page.extract_text() or ""
-                    else:
-                        text = pytesseract.image_to_string(filepath)
-                    
-                    doc.ocr_text = text
-                    if text:
-                        doc.status = 'ocr_complete'
-                    else:
-                        doc.status = 'failed'
-                    doc.save()
-                except Exception as e:
-                    doc.ocr_text = f'Extraction failed. Error: {e}'
-                    doc.status = 'extraction_failed'
-                    doc.save()
-
-                # Process document in background or immediately
-                process_document(doc)
+                # Start AI in a background thread
+                thread = threading.Thread(target=process_document, args=(doc.id,))
+                thread.daemon = True
+                thread.start()
                 uploaded_count += 1
 
             return redirect(reverse("core:documents_list", args=[business.id]))
@@ -176,30 +160,98 @@ def document_detail(request, pk):
         'business': doc.business,
         'lines': lines, 
         'vouchers': vouchers,
+        'all_accounts': doc.business.accounts.all().select_related('group').order_by('name'),
+        'all_groups': doc.business.account_groups.all().order_by('name'),
         'metrics': {
-            'total_value': float(doc_total),
+            'total_value': doc_total,
             'match_count': processed_count,
-            'reliability': 94 if doc.status == 'processed' else 0,
-            'burn_rate': float(cfo_summary['burn_rate']),
-            'tax_savings': float(cfo_summary['tax_savings']),
-            'business_pl': float(cfo_summary['net_profit_loss'])
+            'reliability': doc.confidence if doc.is_processed else 0,
+            'burn_rate': cfo_summary['burn_rate'],
+            'tax_savings': cfo_summary['tax_savings'],
+            'business_pl': cfo_summary['net_profit_loss']
         },
-        'cfo': cfo_summary
+        'health': cfo_summary['health_checks'],
+        'ollama_model': getattr(settings, 'OLLAMA_MODEL', 'llama3.1')
     }
     return render(request, 'core/document_detail.html', context)
 
 
 @login_required
+@require_POST
 def approve_vouchers(request, pk):
-    doc = get_object_or_404(Document, pk=pk, business__created_by=request.user)
-    if request.method == "POST":
-        doc.vouchers.all().update(is_draft=False)
-        doc.is_synced_to_tally = True
-        doc.synced_at = timezone.now()
-        doc.sync_log = f"Successfully verified {doc.vouchers.count()} entries and prepared for Tally import."
+    print(f"DEBUG: Entering approve_vouchers for PK {pk}")
+    if request.user.is_superuser:
+        doc = get_object_or_404(Document, pk=pk)
+    else:
+        doc = get_object_or_404(Document, pk=pk, business__created_by=request.user)
+    doc.vouchers.all().update(is_draft=False)
+    doc.is_synced_to_tally = True
+    doc.synced_at = timezone.now()
+    doc.sync_log = f"Successfully verified {doc.vouchers.count()} entries and prepared for Tally import."
+    doc.save()
+    messages.success(request, "Vouchers verified and synchronized to internal ledger.")
+    return redirect(reverse('core:document_detail', args=[pk]))
+
+
+@login_required
+@require_POST
+def reprocess_document(request, pk):
+    print(f"DEBUG: Entering reprocess_document for PK {pk}")
+    if request.user.is_superuser:
+        doc = get_object_or_404(Document, pk=pk)
+    else:
+        doc = get_object_or_404(Document, pk=pk, business__created_by=request.user)
+    
+    # 1. Reset document state immediately
+    doc.lines.all().delete()
+    doc.vouchers.all().delete()
+    doc.status = 'processing'
+    doc.is_processed = False
+    doc.extraction_errors = {}
+    doc.save()
+    
+    # 2. Start AI in a background thread
+    from core.processor import process_document
+    thread = threading.Thread(target=process_document, args=(doc.id,))
+    thread.daemon = True # Thread dies if main process dies
+    thread.start()
+    
+    messages.info(request, "AI analysis started in background. Please refresh in a few moments.")
+    return redirect(reverse('core:document_detail', args=[pk]))
+
+
+@login_required
+@require_POST
+def update_ocr_text(request, pk):
+    """
+    Expert Mode: Allows CAs to correct OCR mistakes manually before AI extraction.
+    """
+    if request.user.is_superuser:
+        doc = get_object_or_404(Document, pk=pk)
+    else:
+        doc = get_object_or_404(Document, pk=pk, business__created_by=request.user)
+    
+    new_text = request.POST.get('ocr_text', '')
+    doc.ocr_text = new_text
+    doc.save()
+    
+    if 'process_ai' in request.POST:
+        # Reset state for full AI reprocessing
+        doc.lines.all().delete()
+        doc.vouchers.all().delete()
+        doc.status = 'processing'
+        doc.is_processed = False
+        doc.extraction_errors = {}
         doc.save()
-        messages.success(request, "Vouchers verified and synchronized to internal ledger.")
-        return redirect(reverse('core:document_detail', args=[pk]))
+        
+        from core.processor import process_document
+        thread = threading.Thread(target=process_document, args=(doc.id,))
+        thread.daemon = True
+        thread.start()
+        messages.success(request, "OCR text corrected. AI Re-extraction started in background.")
+    else:
+        messages.success(request, "OCR text updated. Document is now ready for manual or AI processing.")
+        
     return redirect(reverse('core:document_detail', args=[pk]))
 
 

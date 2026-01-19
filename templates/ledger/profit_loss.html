@@ -1,82 +1,87 @@
 {% extends 'core/base.html' %}
+
 {% block content %}
 <div class="card" style="border-bottom: 3px solid #10b981;">
-    <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-classic); padding-bottom: 1rem;">
-        <h1 style="margin-bottom: 0.25rem;">Profit & Loss Account</h1>
-        <div class="small" style="color: var(--text-secondary); font-weight: 700;">
-            {{ business.name }} | Statement of Financial Performance
-        </div>
+  <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-classic); padding-bottom: 1rem;">
+    <h1 style="margin-bottom: 0.25rem;">Profit & Loss Account</h1>
+    <div class="small" style="color: var(--text-secondary); font-weight: 700;">
+      {{ business.name }} | Statement of Financial Performance
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0;">
+    <!-- LEFT SIDE: EXPENSES -->
+    <div style="border-right: 2px solid var(--border-classic); padding-right: 2rem;">
+      <h3 style="color: #cf1322; font-size: 1.1rem; border-bottom: 1px solid #f0f2f5; padding-bottom: 0.5rem;">
+        Indirect Expenses
+      </h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        {% for item in expense_data %}
+          <tr>
+            <td style="padding: 0.75rem 0; font-weight: 600; color: #4b4f56;">{{ item.name }}</td>
+            <td align="right" class="ledger-number" style="padding: 0.75rem 0;">
+              ₹{{ item.amount | floatformat:2 }}
+            </td>
+          </tr>
+        {% endfor %}
+        <tr style="border-top: 1px solid var(--border-classic); font-weight: 800;">
+          <td style="padding: 1rem 0;">Total Expenses</td>
+          <td align="right" class="ledger-number" style="padding: 1rem 0;">
+            ₹{{ total_expense | floatformat:2 }}
+          </td>
+        </tr>
+      </table>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0;">
-        <!-- LEFT SIDE: EXPENSES -->
-        <div style="border-right: 2px solid var(--border-classic); padding-right: 2rem;">
-            <h3 style="color: #cf1322; font-size: 1.1rem; border-bottom: 1px solid #f0f2f5; padding-bottom: 0.5rem;">
-                Indirect Expenses
-            </h3>
-            <table style="width: 100%; border-collapse: collapse;">
-                {% for item in expense_data %}
-                <tr>
-                    <td style="padding: 0.75rem 0; font-weight: 600; color: #4b4f56;">{{ item.name }}</td>
-                    <td align="right" class="ledger-number" style="padding: 0.75rem 0;">
-                        ₹{{ item.amount|floatformat:2 }}
-                    </td>
-                </tr>
-                {% endfor %}
-                <tr style="border-top: 1px solid var(--border-classic); font-weight: 800;">
-                    <td style="padding: 1rem 0;">Total Expenses</td>
-                    <td align="right" class="ledger-number" style="padding: 1rem 0;">
-                        ₹{{ total_expense|floatformat:2 }}
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        <!-- RIGHT SIDE: INCOME -->
-        <div style="padding-left: 2rem;">
-            <h3 style="color: #27ae60; font-size: 1.1rem; border-bottom: 1px solid #f0f2f5; padding-bottom: 0.5rem;">
-                Direct & Indirect Income
-            </h3>
-            <table style="width: 100%; border-collapse: collapse;">
-                {% for item in income_data %}
-                <tr>
-                    <td style="padding: 0.75rem 0; font-weight: 600; color: #4b4f56;">{{ item.name }}</td>
-                    <td align="right" class="ledger-number" style="padding: 0.75rem 0;">
-                        ₹{{ item.amount|floatformat:2 }}
-                    </td>
-                </tr>
-                {% endfor %}
-                <tr style="border-top: 1px solid var(--border-classic); font-weight: 800;">
-                    <td style="padding: 1rem 0;">Total Income</td>
-                    <td align="right" class="ledger-number" style="padding: 1rem 0;">
-                        ₹{{ total_income|floatformat:2 }}
-                    </td>
-                </tr>
-            </table>
-        </div>
+    <!-- RIGHT SIDE: INCOME -->
+    <div style="padding-left: 2rem;">
+      <h3 style="color: #27ae60; font-size: 1.1rem; border-bottom: 1px solid #f0f2f5; padding-bottom: 0.5rem;">
+        Direct & Indirect Income
+      </h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        {% for item in income_data %}
+          <tr>
+            <td style="padding: 0.75rem 0; font-weight: 600; color: #4b4f56;">{{ item.name }}</td>
+            <td align="right" class="ledger-number" style="padding: 0.75rem 0;">
+              ₹{{ item.amount | floatformat:2 }}
+            </td>
+          </tr>
+        {% endfor %}
+        <tr style="border-top: 1px solid var(--border-classic); font-weight: 800;">
+          <td style="padding: 1rem 0;">Total Income</td>
+          <td align="right" class="ledger-number" style="padding: 1rem 0;">
+            ₹{{ total_income | floatformat:2 }}
+          </td>
+        </tr>
+      </table>
     </div>
+  </div>
 
-    <!-- NET RESULT -->
-    <div
-        style="margin-top: 2rem; padding: 1.5rem; background: #f0f2f5; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <div style="font-weight: 800; color: var(--text-secondary); text-transform: uppercase; font-size: 0.75rem;">
-                Trading Result</div>
-            <h2 style="margin: 0; color: #1e3a8a;">
-                {% if net_profit >= 0 %}Net Profit{% else %}Net Loss{% endif %}
-            </h2>
-        </div>
-        <div style="text-align: right;">
-            {% if net_profit >= 0 %}
-            <div class="ledger-number" style="font-size: 2.2rem; color: #27ae60;">
-                ₹{{ net_profit|floatformat:2 }}
-            </div>
-            {% else %}
-            <div class="ledger-number" style="font-size: 2.2rem; color: #cf1322;">
-                ₹{{ net_profit|floatformat:2 }}
-            </div>
-            {% endif %}
-        </div>
+  <!-- NET RESULT -->
+  <div style="margin-top: 2rem; padding: 1.5rem; background: #f0f2f5; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <div style="font-weight: 800; color: var(--text-secondary); text-transform: uppercase; font-size: 0.75rem;">
+        Trading Result
+      </div>
+      <h2 style="margin: 0; color: #1e3a8a;">
+        {% if net_profit >= 0 %}
+          Net Profit
+        {% else %}
+          Net Loss
+        {% endif %}
+      </h2>
     </div>
+    <div style="text-align: right;">
+      {% if net_profit >= 0 %}
+        <div class="ledger-number" style="font-size: 2.2rem; color: #27ae60;">
+          ₹{{ net_profit | floatformat:2 }}
+        </div>
+      {% else %}
+        <div class="ledger-number" style="font-size: 2.2rem; color: #cf1322;">
+          ₹{{ net_profit | floatformat:2 }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endblock %}

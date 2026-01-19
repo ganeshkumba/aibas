@@ -52,7 +52,10 @@ class LedgerService:
             raise ValidationError("Locked Financial Year: Cannot modify records.")
 
         # 2. Date Validation
-        v_date = voucher_data['date']
+        v_date = voucher_data.get('date')
+        if not v_date:
+            raise ValidationError("Transaction Date is required for bookkeeping.")
+
         if isinstance(v_date, str):
             v_date = datetime.datetime.strptime(v_date, "%Y-%m-%d").date()
             
@@ -151,6 +154,21 @@ class LedgerService:
             name="Pending Classification",
             group=group,
             defaults={'help_text': 'Used for settlements awaiting invoice identification (Elite CFO Standard)'}
+        )
+        return acc
+
+    @staticmethod
+    def get_or_create_suspense(business):
+        group, _ = AccountGroup.objects.get_or_create(
+            business=business, 
+            name="Suspense Accounts",
+            defaults={'classification': 'LIABILITY', 'is_revenue_nature': False}
+        )
+        acc, _ = Account.objects.get_or_create(
+            business=business, 
+            name="Suspense Account",
+            group=group,
+            defaults={'help_text': 'Temporary parking for entries with questionable classification'}
         )
         return acc
 
@@ -262,12 +280,20 @@ class LedgerService:
         checks = []
         
         # 1. Pending Classification Audit (Elite CFO Protocol)
-        pending_acc = LedgerService.get_or_create_pending_classification(business)
-        bal = LedgerService.get_account_balance(pending_acc.id)
-        if abs(bal) > 0.01:
+        # Point: Aggregate all variations (Debit/Credit/Suffixes) for a true protocol check
+        pending_balances = Account.objects.filter(
+            business=business, 
+            name__icontains="Pending Classification"
+        )
+        
+        total_pending_bal = Decimal('0.00')
+        for acc in pending_balances:
+            total_pending_bal += LedgerService.get_account_balance(acc.id)
+            
+        if abs(total_pending_bal) > 0.01:
             checks.append({
                 'severity': 'ERROR',
-                'message': f"Pending Classification is not zero (₹{bal}). This indicates unresolved cash movements in bank statements needing invoice reconciliation.",
+                'message': f"Pending Classification is not zero (₹{total_pending_bal}). This indicates unresolved cash movements in bank statements needing invoice reconciliation.",
                 'code': 'PENDING_RESIDUAL'
             })
 
@@ -294,6 +320,37 @@ class LedgerService:
                 'severity': 'CRITICAL',
                 'message': f"{payment_expenses.count()} expenses were recorded directly via Payment. This violates Accrual Accounting.",
                 'code': 'PAYMENT_EXPENSE_DIRECT'
+            })
+
+        # 4. Financial Health Guardrails (Professional Alerts)
+        total_assets = JournalEntry.objects.filter(
+            account__business=business,
+            account__group__classification='ASSET',
+            voucher__is_draft=False
+        ).aggregate(dr=Sum('debit'), cr=Sum('credit'))
+        
+        asset_bal = (total_assets['dr'] or Decimal('0')) - (total_assets['cr'] or Decimal('0'))
+        if asset_bal <= 0:
+             checks.append({
+                'severity': 'WARNING',
+                'message': "Incomplete Books: Total Assets are ₹0 or negative. Opening bank balance or capital infusion likely missing.",
+                'code': 'ZERO_ASSET_BASE'
+            })
+
+        # Calculate Equity/Net Worth (Total Assets - Total Liabilities)
+        total_liab = JournalEntry.objects.filter(
+            account__business=business,
+            account__group__classification='LIABILITY',
+            voucher__is_draft=False
+        ).aggregate(dr=Sum('debit'), cr=Sum('credit'))
+        
+        liab_bal = (total_liab['cr'] or Decimal('0')) - (total_liab['dr'] or Decimal('0'))
+        
+        if asset_bal < liab_bal:
+            checks.append({
+                'severity': 'WARNING',
+                'message': "Negative Equity Alert: Your liabilities exceed your assets. Possible missing capital records or severe operational loss.",
+                'code': 'NEGATIVE_EQUITY'
             })
 
         return checks
