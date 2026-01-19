@@ -1,75 +1,103 @@
-# AI‑Based Accounting System (God-Mode Enterprise Edition)
+# 🇮🇳 The Ledger: "God-Mode" AI Accounting & Audit Co-Pilot
 
-An AI‑powered, CA-Grade accounting SaaS designed specifically for Indian businesses. This system goes beyond basic OCR to provide "God-Level" automation, identifying tax traps, automating reconciliation, and ensuring audit-ready financial statements.
-
-## 🚀 Key Features (God-Mode)
-
-### 1. Multimodal Vision Extraction (Gemini 1.5 Flash)
-- **Beyond OCR:** Uses Gemini 1.5 Flash to "see" documents. It recognizes logos, handwritten dates, "PAID" stamps, and semi-legible cursive on small receipts.
-- **Contextual Intelligence:** Extracts not just text, but accounting logic (e.g., identifying if a bill is B2B or B2C based on the "Bill-To" section).
-
-### 2. God-Level Indian Accounting Logic
-- **MSME 45-Day Trap (Sec 43B(h)):** Automatically detects MSME vendors via Udyam numbers/logos and sets payment deadlines.
-- **TDS Applicability (Sec 194I/194J):** Automatically detects RENT or Professional Fees and suggests TDS splits when thresholds are crossed.
-- **Fractional GST Round-offs:** Intelligent 1-paisa balancing to ensure Tally XML imports never fail due to tiny rounding differences.
-- **B2B vs B2C Detection:** Verified GSTINs in the "Bill To" section. If missing, the system moves tax to the Expense ledger to prevent illegal ITC claims.
-
-### 3. "God-Mode" Reconciliation Engine
-- **Ghost Liability Killer:** Automatically matches bank statement withdrawals/deposits to uploaded purchase/sales invoices based on amount and narration keywords.
-- **Bill-to-Bill Tracking:** Implements Tally-style `<BILLALLOCATIONS.LIST>` logic to knock off liabilities and ensure vendor balances reach zero.
-- **Manual Trigger:** A "God Mode" reconcile button on the Trial Balance to sweep and fix all pending classifications.
-
-### 4. Advanced Financial Health Protocol
-- **Real-time Health Checks:** The Trial Balance automatically warns about "Negative Equity," "Zero AssetBase," and "Pending Classifications."
-- **One-Click Capital Infusion:** A guided flow to fix "Negative Equity" by recording initial capital investments.
-
-### 5. Multi-Page & Multi-Document Support
-- **Bank Statements:** Parses multi-page PDF/Images while tracking running balances.
-- **Audit Vault:** A central repository for all processed documents with their AI-generated "Accounting Logic" audit trails.
+[![Standard: Indian GAAP](https://img.shields.io/badge/Standard-Indian%20GAAP-blue.svg)](https://en.wikipedia.org/wiki/Generally_Accepted_Accounting_Principles_(India))
+[![AI: Gemini 1.5 Flash](https://img.shields.io/badge/AI-Gemini%201.5%20Flash-orange.svg)](https://deepmind.google/technologies/gemini/)
+[![Framework: Django 5.x](https://img.shields.io/badge/Framework-Django%205.x-green.svg)](https://www.djangoproject.com/)
 
 ---
 
-## 🎨 UI/UX: Dark Mode & Premium Aesthetics
-- **Dual-Theme Support:** Toggle between "Professional Light" and "Audit Dark" modes.
-- **Glassmorphism:** Modern, responsive design with clear visual hierarchies and micro-animations.
+## 📖 Project Overview: From Clueless to God-Mode
+This repository captures the transformation of an "Incomplete & Clueless Accounting System" into a **Professional-Grade Virtual Auditor**. Designed specifically for the Indian statutory landscape, it automates the most painful aspects of bookkeeping—AI extraction, tax compliance, and bank reconciliation.
 
 ---
 
-## 🛠 Tech Stack
-- **Backend:** Python 3.13, Django 5.x
-- **AI Brain:** Google Gemini 1.5 Flash (Primary), Ollama (Fallback)
-- **Database:** SQLite (MVP)
-- **Frontend:** Vanilla CSS (Custom Variable-based Theming), JS
-- **Compliance:** TallyPrime/ERP 9 XML Standards
+## ✨ God-Mode Feature Set
+
+### 1. 👁️ Multimodal Vision Extraction
+Unlike standard OCR, "The Ledger" uses **Gemini 1.5 Flash** as a Vision model.
+- **Visual Intelligence:** Reads "PAID" stamps, identifies MSME logos, and deciphers semi-legible handwriting on small, stained thermal receipts.
+- **Bill-To Verification:** AI checks if your company's GSTIN is present in the "Bill To" section. If not, it automatically flags the bill as B2C and treats GST as an expense (Preventing illegal ITC claims).
+- **Audit Trails:** Every document processing event generates an `accounting_logic` field, explaining why specific TDS or GST treatments were chosen.
+
+### 2. ⚖️ CA-Grade Statutory Compliance
+The engine enforces complex Indian accounting rules at the moment of ingestion:
+- **MSME 45-Day Trap (Sec 43B(h)):** Detects MSME-registered vendors via Udyam numbers and sets an automated 45-day payment deadline alerts.
+- **TDS Splitting (Sec 194I/194J):** Detects "Rent" or "Professional Fees" and automatically splits the credit into `Vendor Payable` and `TDS Payable` if thresholds are met.
+- **Fractional GST Rounding:** Implements 1-paisa balancing between CGST and SGST to ensure zero failures during Tally XML imports.
+- **Place of Supply (POS):** Automated state-code verification against Business GSTIN to determine CGST/SGST vs IGST.
+
+### 3. 💸 The Reconciliation Engine (Liability Solver)
+Solves the "Ghost Liability" problem where bank payments don't match bills.
+- **Auto-Matching:** Pauses on "Pending Classification" for bank entries and attempts to pair them with Purchase Invoices using Amount + Narration Fuzzy Keywords (e.g., "NEFT-AMAZON" → "Amazon Web Services").
+- **Bill-to-Bill Tracking:** Generates Tally-compliant `<BILLALLOCATIONS.LIST>` tags to "knock off" liabilities automatically.
+- **Capital Infusion Flow:** A specialized UI to record initial capital investments or opening balances, instantly resolving "Negative Equity" warnings.
+
+### 4. 🎨 Audit-Grade UX/UI
+- **Audit Dark Mode:** A high-contrast dark theme designed for professional auditing.
+- **Interactive Trial Balance:** Includes a "Virtual CFO" that runs 4+ health checks (Negative Equity, Zero Assets, Pending Classification, Duplicate Detection).
+- **Audit Vault:** A centralized document storage hub with status tags (MSME, B2B, Reconciled).
 
 ---
 
-## 🚦 Quick Start
+## 🏗️ Technical Architecture
 
-### 1. Configure Environment
-Create a `.env` file:
+### **Apps & Modules**
+- **`core/`**: The backbone. Manages Business entities, Documents, and the high-speed `Processor` (AI Ingestion).
+- **`apps/ledger/`**: The Double-Entry Engine. Enforces GAAP rules, manages the Chart of Accounts, and generates Financial Statements (Trial Balance, P&L, Balance Sheet).
+- **`apps/ai_bridge/`**: The AI Gateway. Supports **Gemini 1.5 Flash** (Vision) and **Ollama** (Local Fallback).
+- **`apps/accounts/`**: Custom user management and authentication (Email-based login).
+
+### **Core Services**
+- **`AutomationService`**: Bridges documents to vouchers. Handles statutory splits (TDS/GST) and the Reconciliation Engine.
+- **`LedgerService`**: The "CFO" logic. Generates health checks, manages voucher numbering, and handles multi-ledger balancing.
+- **`DocumentProcessor`**: Orchestrates AI extraction and database persistence.
+
+---
+
+## 🚦 Installation & Setup
+
+### 1. Requirements
+- Python 3.13+
+- Tesseract OCR (Optional Fallback)
+- **Google AI Studio Key** (Required for God-Mode Vision)
+
+### 2. Environment Configuration
+Create a `.env` file in the root:
 ```env
 AI_PROVIDER=gemini
 GEMINI_API_KEY=your_key_here
-TESSERACT_CMD=path_to_tesseract
+TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+DB_NAME=db.sqlite3
+DEBUG=True
 ```
 
-### 2. Setup System
+### 3. Quick Run
 ```bash
-python -m venv venv
-venv\Scripts\Activate
+# Install dependencies
 pip install -r requirements.txt
+
+# Database Setup
 python manage.py migrate
+python manage.py createsuperuser
+
+# Start Server
 python manage.py runserver
 ```
 
-### 3. The "God-Mode" Flow
-1. **Upload:** Head to 'Upload Entry' and drop your messy bank statements or bills.
-2. **Review:** Check the 'Audit Vault' for AI-suggested TDS and GST treatments.
-3. **Reconcile:** Open 'Trial Balance' and click **Reconcile Ledgers (God Mode)** to clear all pending bank entries.
-4. **Export:** Download the Tally XML and import it directly into TallyPrime.
+---
+
+## 📜 Productivity & Logic Log
+The project maintains a detailed **Daily Productivity Log** located at `project_analysis/daily_productivity_log.md`, tracking every major issue resolved from "Logic Failures" to "Vision Integrations."
 
 ---
 
+## 🗺️ Future Roadmap
+- [ ] **Multi-Currency Support:** For Indian businesses with foreign export invoices.
+- [ ] **Handwritten Regional Logic:** Supporting receipts in Devanagari (Hindi) and South Indian scripts.
+- [ ] **Auto-Generated GSTR-2B Recon:** Matching AI documents against government portal data.
+
 ## 📄 License
-Licensed under Apache 2.0.
+Licensed under Apache 2.0. Developed by the **Advanced Agentic Coding** team to transform fragmented codebases into elite financial tools.
+
+---
+**"Don't just record transactions. Audit the future."**
