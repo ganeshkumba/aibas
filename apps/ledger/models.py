@@ -20,7 +20,7 @@ class AccountGroup(models.Model):
     Example: Assets -> Current Assets -> Bank Accounts
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='account_groups')
     name = models.CharField(max_length=100)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subgroups')
     
@@ -48,7 +48,7 @@ class Account(models.Model):
     The actual Ledger Account.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='accounts')
     group = models.ForeignKey(AccountGroup, on_delete=models.CASCADE, related_name='accounts')
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=50, blank=True, null=True) # Optional accounting code
@@ -121,7 +121,7 @@ class Voucher(models.Model):
     Header for a transaction.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='ledger_vouchers')
     financial_year = models.ForeignKey(FinancialYear, on_delete=models.CASCADE)
     document = models.ForeignKey(Document, on_delete=models.CASCADE, null=True, blank=True, related_name='vouchers')
     voucher_type = models.CharField(max_length=20, choices=VoucherType.choices)

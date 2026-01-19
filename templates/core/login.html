@@ -1,30 +1,34 @@
-{% extends "core/base.html" %}
+{% extends 'core/base.html' %}
 
 {% block content %}
-<div class="card" style="max-width:400px;margin:auto;">
-    <h2>Login</h2>
+<div class="card" style="max-width: 400px; margin: 4rem auto; padding: 2.5rem;">
+  <h2 style="text-align: center; margin-bottom: 2rem;">Ledger Access</h2>
 
-    <form method="post">
-        {% csrf_token %}
+  <form method="post">
+    {% csrf_token %}
 
+    {% if form.non_field_errors %}
+      <div style="color: #cf1322; background: #fff1f0; padding: 0.75rem; border-radius: 4px; margin-bottom: 1.5rem; font-size: 0.85rem;">
         {{ form.non_field_errors }}
+      </div>
+    {% endif %}
 
-        <div>
-            <label>Email</label>
-            {{ form.username }}
-        </div>
+    <div style="margin-bottom: 1.25rem;">
+      <label style="font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Email Address</label>
+      {{ form.username }}
+    </div>
 
-        <div>
-            <label>Password</label>
-            {{ form.password }}
-        </div>
+    <div style="margin-bottom: 2rem;">
+      <label style="font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Password</label>
+      {{ form.password }}
+    </div>
 
-        <button type="submit">Login</button>
-    </form>
+    <button type="submit" class="btn" style="width: 100%; padding: 0.8rem; font-size: 1rem;">Sign In</button>
+  </form>
 
-    <p style="margin-top:10px;">
-        Don’t have an account?
-        <a href="{% url 'core:signup' %}">Sign Up</a>
-    </p>
+  <p style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem;">
+    New to The Ledger?
+    <a href="{% url 'core:signup' %}" style="color: var(--fb-blue); font-weight: 700; text-decoration: none;">Create Enterprise Account</a>
+  </p>
 </div>
 {% endblock %}

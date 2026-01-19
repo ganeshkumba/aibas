@@ -132,8 +132,14 @@ class Document(models.Model):
 
     doc_type = models.CharField(max_length=20, choices=DOC_TYPES, default='receipt')
     
-    # Tracks the progress (e.g., 'uploaded' -> 'processing' -> 'completed')
-    status = models.CharField(max_length=50, default='uploaded')
+    STATUS_CHOICES = [
+        ('uploaded', 'Uploaded'),
+        ('processing', 'Processing'),
+        ('ocr_complete', 'OCR Complete'),
+        ('processed', 'Processed'),
+        ('failed', 'Failed'),
+    ]
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='uploaded')
 
     # The 'Plain Text' that the AI reads from the image
     ocr_text = models.TextField(blank=True, null=True)
@@ -162,6 +168,15 @@ class Document(models.Model):
     )
 
     extraction_errors = models.JSONField(default=dict, blank=True, help_text="List of issues found during AI processing")
+    confidence = models.FloatField(default=0.0, help_text="AI Confidence Score (0-100)")
+
+    # --- God-Level Indian Accounting Fields ---
+    is_msme = models.BooleanField(default=False, help_text="Detected if Vendor is MSME registered")
+    udyam_number = models.CharField(max_length=50, blank=True, null=True, help_text="Udyam Registration Number")
+    payment_deadline = models.DateField(blank=True, null=True, help_text="Hard 45-day MSME deadline (Section 43B(h))")
+    
+    is_b2b = models.BooleanField(default=False, help_text="True if Business's GSTIN is present on the bill")
+    accounting_logic = models.TextField(blank=True, null=True, help_text="AI's Chain-of-thought logic for audit trails")
 
     class Meta:
         ordering = ['-uploaded_at']
@@ -211,6 +226,10 @@ class ExtractedLineItem(models.Model):
     hsn_code = models.CharField(max_length=20, blank=True, null=True)
     place_of_supply = models.CharField(max_length=100, blank=True, null=True)
     vendor_gstin = models.CharField(max_length=20, blank=True, null=True)
+    
+    # --- God-Level TDS Logic ---
+    tds_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0.0)
+    tds_rate = models.CharField(max_length=10, blank=True, null=True, help_text="e.g. 10% or 2%")
 
     # A copy of the "Raw data" from the AI in case we need more details later
     raw = models.JSONField(default=dict, blank=True)

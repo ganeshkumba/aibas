@@ -1,26 +1,52 @@
 {% extends 'core/base.html' %}
 {% block content %}
-<div class="card">
-  <h2>Upload Documents for {{ business.name }}</h2>
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+  <h2 style="margin-bottom: 0.5rem;">Deposit Documents</h2>
+  <div class="small" style="font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 2rem;">
+    Entity: {{ business.name }}
+  </div>
+
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
     <div style="margin-bottom: 1.5rem;">
-      <label for="id_doc_type">Document Type:</label>
+      <label style="font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">CLASSIFICATION</label>
       {{ form.doc_type }}
     </div>
 
-    <div style="margin-bottom: 1.5rem;">
-      <label for="id_file">Select Files (Multiple allowed):</label>
-      <input type="file" name="file" id="id_file" multiple accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp" required>
+    <div style="margin-bottom: 2rem; padding: 2rem; border: 2px dashed var(--border-classic); border-radius: 12px; text-align: center; background: #fafbfc;">
+      <label for="id_file" style="cursor: pointer; display: block;">
+        <div style="font-size: 2.5rem; margin-bottom: 1rem;">📁</div>
+        <div style="font-weight: 700; color: var(--fb-blue); margin-bottom: 0.5rem;">Click to select or drag & drop</div>
+        <div class="small">PDF, PNG, JPG, TIFF, BMP (MAX 10MB)</div>
+        <input type="file" name="file" id="id_file" multiple accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp" required style="display: none;">
+      </label>
     </div>
 
-    <button type="submit" class="btn">Upload All Files</button>
+    <button type="submit" class="btn" style="width: 100%; padding: 1rem; font-size: 1rem;">Initialize AI Extraction</button>
   </form>
 
-  <p class="small" style="margin-top: 1rem;">
-    💡 You can select multiple files at once (Ctrl+Click or Shift+Click).
-    Supported formats: PDF, JPG, PNG, TIFF, BMP
-  </p>
+  <div style="margin-top: 2rem; padding: 1.25rem; background: #e7f3ff; border-radius: 8px; border: 1px solid #1877f2;">
+    <div style="display: flex; gap: 0.75rem;">
+      <div style="font-size: 1.2rem;">⚡</div>
+      <div class="small" style="color: #1a2a4b; font-weight: 500;">
+        <strong>Multi-File Support:</strong> You can select up to 50 documents at once. Our AI will parallel-process each record and map it to the corresponding ledger account.
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  // Simple listener to show filename after selection
+  const fileInput = document.getElementById('id_file');
+  fileInput.addEventListener('change', (e) => {
+    const count = e.target.files.length;
+    const label = e.target.closest('label').querySelector('.small');
+    if (count > 0) {
+      label.textContent = `Ready to upload ${count} document(s)`;
+      label.style.color = '#10b981';
+      label.style.fontWeight = '800';
+    }
+  });
+</script>
 {% endblock %}

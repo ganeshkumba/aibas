@@ -1,129 +1,75 @@
-# AI‑Based Accounting System (MVP)
+# AI‑Based Accounting System (God-Mode Enterprise Edition)
 
-An AI‑powered accounting SaaS MVP that automates core accounting tasks such as ingesting documents, extracting key fields, and preparing basic summaries for accountants and businesses.
+An AI‑powered, CA-Grade accounting SaaS designed specifically for Indian businesses. This system goes beyond basic OCR to provide "God-Level" automation, identifying tax traps, automating reconciliation, and ensuring audit-ready financial statements.
 
-The current codebase focuses on:
-- A Django project `acctproj` with a `core` app for business and document management.
-- OCR‑based extraction using Tesseract.
-- Simple rule‑based and AI‑assisted parsing into line items.
-- A basic web UI to sign up, log in, register businesses, upload documents, and view extracted data.
+## 🚀 Key Features (God-Mode)
 
----
+### 1. Multimodal Vision Extraction (Gemini 1.5 Flash)
+- **Beyond OCR:** Uses Gemini 1.5 Flash to "see" documents. It recognizes logos, handwritten dates, "PAID" stamps, and semi-legible cursive on small receipts.
+- **Contextual Intelligence:** Extracts not just text, but accounting logic (e.g., identifying if a bill is B2B or B2C based on the "Bill-To" section).
 
-## Features (Current MVP)
+### 2. God-Level Indian Accounting Logic
+- **MSME 45-Day Trap (Sec 43B(h)):** Automatically detects MSME vendors via Udyam numbers/logos and sets payment deadlines.
+- **TDS Applicability (Sec 194I/194J):** Automatically detects RENT or Professional Fees and suggests TDS splits when thresholds are crossed.
+- **Fractional GST Round-offs:** Intelligent 1-paisa balancing to ensure Tally XML imports never fail due to tiny rounding differences.
+- **B2B vs B2C Detection:** Verified GSTINs in the "Bill To" section. If missing, the system moves tax to the Expense ledger to prevent illegal ITC claims.
 
-### 1. Document Processing
-- Upload invoices, receipts, bills, and bank statements as image files.
-- Extract key details such as dates, amounts, GSTIN, PAN, and vendor information using OCR.
-- OCR is powered by **Tesseract**; non‑image formats fall back to a simple placeholder message in this MVP.
+### 3. "God-Mode" Reconciliation Engine
+- **Ghost Liability Killer:** Automatically matches bank statement withdrawals/deposits to uploaded purchase/sales invoices based on amount and narration keywords.
+- **Bill-to-Bill Tracking:** Implements Tally-style `<BILLALLOCATIONS.LIST>` logic to knock off liabilities and ensure vendor balances reach zero.
+- **Manual Trigger:** A "God Mode" reconcile button on the Trial Balance to sweep and fix all pending classifications.
 
-### 2. Business & Document Management
-- Create and manage businesses.
-- Associate uploaded documents with a business.
-- View documents, OCR text, and extracted line items for each business.
-- See basic summaries of income, expenses, and GST aggregates per business.
+### 4. Advanced Financial Health Protocol
+- **Real-time Health Checks:** The Trial Balance automatically warns about "Negative Equity," "Zero AssetBase," and "Pending Classifications."
+- **One-Click Capital Infusion:** A guided flow to fix "Negative Equity" by recording initial capital investments.
 
-### 3. Ledger & AI Roadmap (Planned / Partially Implemented)
-- Core ledger models and services exist under `apps/ledger` for double‑entry vouchers and account balances.
-- AI bridge and ingestion services under `apps/ai_bridge` and `apps/ingestion` will eventually:
-  - Turn uploaded documents into draft vouchers.
-  - Suggest ledger accounts and tax breakdowns automatically.
-- These modules are **work in progress** and not yet wired into the main UI.
+### 5. Multi-Page & Multi-Document Support
+- **Bank Statements:** Parses multi-page PDF/Images while tracking running balances.
+- **Audit Vault:** A central repository for all processed documents with their AI-generated "Accounting Logic" audit trails.
 
 ---
 
-## Tech Stack
-- **Backend:** Python, Django  
-- **Database:** SQLite (MVP) via Django ORM  
-- **OCR:** Tesseract  
-- **Frontend:** Django templates (HTML/CSS)  
+## 🎨 UI/UX: Dark Mode & Premium Aesthetics
+- **Dual-Theme Support:** Toggle between "Professional Light" and "Audit Dark" modes.
+- **Glassmorphism:** Modern, responsive design with clear visual hierarchies and micro-animations.
 
 ---
 
-## Quick Start (Local)
+## 🛠 Tech Stack
+- **Backend:** Python 3.13, Django 5.x
+- **AI Brain:** Google Gemini 1.5 Flash (Primary), Ollama (Fallback)
+- **Database:** SQLite (MVP)
+- **Frontend:** Vanilla CSS (Custom Variable-based Theming), JS
+- **Compliance:** TallyPrime/ERP 9 XML Standards
 
-### 1. Clone the repository
+---
 
-```bash
-git clone https://github.com/YVK49/AI-based-accounting-system.git
-cd AI-based-accounting-system
+## 🚦 Quick Start
+
+### 1. Configure Environment
+Create a `.env` file:
+```env
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_key_here
+TESSERACT_CMD=path_to_tesseract
 ```
 
-### 2. Create and activate a virtual environment
-
-**Windows (PowerShell):**
-
+### 2. Setup System
 ```bash
 python -m venv venv
-venv\Scripts\Activate.ps1
-```
-
-**Linux/macOS:**
-
-```bash
-python -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install Python dependencies
-
-```bash
+venv\Scripts\Activate
 pip install -r requirements.txt
-```
-
-### 4. Install Tesseract OCR (required for image OCR)
-
-- **Ubuntu (example):**
-
-  ```bash
-  sudo apt update
-  sudo apt install -y tesseract-ocr
-  ```
-
-- **Windows / macOS:**  
-  Install Tesseract from the official binaries for your OS, and ensure `tesseract` is on your `PATH`.  
-  If Tesseract is missing, uploads will succeed but OCR text will fall back to a placeholder.
-
-### 5. Apply migrations
-
-```bash
 python manage.py migrate
-```
-
-### 6. Run the development server
-
-```bash
 python manage.py runserver
 ```
 
-Then open `http://127.0.0.1:8000/` in your browser.
-
-High‑level flows in the current UI:
-- Sign up and log in.
-- Create a business.
-- Upload documents for that business.
-- View documents and extracted text/line items.
+### 3. The "God-Mode" Flow
+1. **Upload:** Head to 'Upload Entry' and drop your messy bank statements or bills.
+2. **Review:** Check the 'Audit Vault' for AI-suggested TDS and GST treatments.
+3. **Reconcile:** Open 'Trial Balance' and click **Reconcile Ledgers (God Mode)** to clear all pending bank entries.
+4. **Export:** Download the Tally XML and import it directly into TallyPrime.
 
 ---
 
-## Contribution Notes
-
-- Prefer creating feature branches from `main`:
-
-  ```bash
-  git checkout -b feature/your-feature-name
-  ```
-
-- Open a Pull Request on GitHub (`YVK49/AI-based-accounting-system`) for review before merging to `main`.
-
----
-
-## Support
-
-- **GitHub Issues:** `https://github.com/YVK49/AI-based-accounting-system/issues`
-
----
-
-## License
-
-This project is licensed under the Apache 2.0 License. See the `LICENSE` file for details.
+## 📄 License
+Licensed under Apache 2.0.

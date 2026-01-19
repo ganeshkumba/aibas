@@ -1,130 +1,210 @@
 {% extends 'core/base.html' %}
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 2rem;">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg-deep: #020617;
+    --surface: #0f172a;
+    --border: #1e293b;
+    --accent-gold: var(--old-money-gold);
+    --accent-blue: #3b82f6;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+  }
+
+  body { background: var(--bg-deep); color: var(--text-primary); font-family: 'Inter', sans-serif; }
+
+  /* Dashboard Navigation */
+  .cfo-header {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    padding: 2.5rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cfo-header::after {
+    content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Stat Grid */
+  .cfo-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    border-radius: 16px;
+    transition: all 0.3s ease;
+  }
+
+  .stat-card:hover { transform: translateY(-5px); border-color: var(--accent-gold); }
+
+  .stat-label { font-size: 0.65rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+  .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 800; }
+
+  /* Quick Actions */
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .action-tile {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    padding: 1.25rem;
+    border-radius: 12px;
+    text-align: center;
+    text-decoration: none;
+    color: white;
+    transition: all 0.2s;
+  }
+
+  .action-tile:hover { background: var(--accent-blue); border-color: var(--accent-blue); transform: scale(1.02); }
+  .action-tile span { display: block; font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .action-tile label { font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+
+  /* Data Table */
+  .entity-registry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .registry-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+
+  .modern-table { width: 100%; border-collapse: collapse; }
+  .modern-table th { padding: 1rem 1.5rem; text-align: left; font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+  .modern-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .modern-table tr:last-child td { border-bottom: none; }
+  .modern-table tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+  .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: 800; }
+  .badge-gold { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+  .btn-cfo {
+    background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue);
+    padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.75rem; font-weight: 700; text-decoration: none;
+    transition: all 0.2s;
+  }
+  .btn-cfo:hover { background: var(--accent-blue); color: white; }
+
+</style>
+
+<div class="cfo-header">
   <div>
-    <h1 style="margin:0; font-family: 'Playfair Display', serif; font-size: 2.2rem;">{{ business.name }}</h1>
+    <h1 style="margin: 0; font-family: 'Inter', sans-serif; font-weight: 800; font-size: 2rem;">{{ business.name }}</h1>
     <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 1rem;">
-      <span class="tag tag-info" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ business.gstin }}</span>
-      <span class="small" style="color: var(--text-secondary); font-weight: 600;">
-        {{ business.state|default:"Federal Jurisdiction" }}
+      <span class="badge badge-gold">{{ business.gstin }}</span>
+      <span style="color: var(--text-secondary); font-weight: 500; font-size: 0.9rem;">
+        {{ business.state | default:"Federal Jurisdiction" }}
       </span>
     </div>
   </div>
-  <div style="display: flex; gap: 0.75rem;">
-    <a href="{% url 'ledger:tally-export' %}?business_id={{ business.id }}" class="btn btn-secondary"
-      style="display: flex; align-items: center; gap: 0.5rem;">
-      <svg style="width:1rem; height:1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-      </svg>
-      Export XML
+  <div style="display: flex; gap: 1rem;">
+    <a href="{% url 'ledger:tally-export' %}?business_id={{ business.id }}" class="btn-cfo" style="border-color: #94a3b8; color: #94a3b8;">
+      Export Tally XML
     </a>
-    <a href="{% url 'core:upload_document' business.id %}" class="btn">New Deposit / Entry</a>
-  </div>
-</div>
-
-<!-- Financial Status Grid -->
-<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
-  <div class="card"
-    style="border-top: 4px solid var(--old-money-gold); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem;">
-    <div class="small"
-      style="font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem;">Assets &
-      Income</div>
-    <div class="ledger-number" style="font-size: 1.75rem; color: #1e3a8a;">
-      ₹{{ summary.total_income|floatformat:2 }}
-    </div>
-  </div>
-  <div class="card"
-    style="border-top: 4px solid #c0392b; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem;">
-    <div class="small"
-      style="font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem;">
-      Liabilities & Expense</div>
-    <div class="ledger-number" style="font-size: 1.75rem; color: #7f1d1d;">
-      ₹{{ summary.total_expense|floatformat:2 }}
-    </div>
-  </div>
-  <div class="card"
-    style="border-top: 4px solid var(--fb-blue); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem;">
-    <div class="small"
-      style="font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem;">Net
-      Capital / Profit</div>
-    <div class="ledger-number" style="font-size: 1.75rem; color: var(--old-money-navy);">
-      ₹{{ summary.net_profit|floatformat:2 }}
-    </div>
-  </div>
-</div>
-
-<!-- Financial Report Suite -->
-<div style="margin-bottom: 2.5rem;">
-  <h3
-    style="margin-bottom: 1rem; color: var(--text-secondary); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; font-weight: 800;">
-    Financial Reports</h3>
-  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
-    <a href="{% url 'ledger:day-book' business.id %}" class="card"
-      style="text-decoration: none; padding: 1.2rem; text-align: center; border: 1px solid var(--border-classic); background: white;">
-      <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📖</div>
-      <div style="font-weight: 700; color: var(--fb-blue); font-size: 0.85rem;">Day Book</div>
-    </a>
-    <a href="{% url 'ledger:trial-balance' business.id %}" class="card"
-      style="text-decoration: none; padding: 1.2rem; text-align: center; border: 1px solid var(--border-classic); background: white;">
-      <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚖️</div>
-      <div style="font-weight: 700; color: var(--fb-blue); font-size: 0.85rem;">Trial Balance</div>
-    </a>
-    <a href="{% url 'ledger:profit-loss' business.id %}" class="card"
-      style="text-decoration: none; padding: 1.2rem; text-align: center; border: 1px solid var(--border-classic); background: white;">
-      <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📈</div>
-      <div style="font-weight: 700; color: var(--fb-blue); font-size: 0.85rem;">P & L Account</div>
-    </a>
-    <a href="{% url 'ledger:balance-sheet' business.id %}" class="card"
-      style="text-decoration: none; padding: 1.2rem; text-align: center; border: 1px solid var(--border-classic); background: white;">
-      <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🏛️</div>
-      <div style="font-weight: 700; color: var(--fb-blue); font-size: 0.85rem;">Balance Sheet</div>
+    <a href="{% url 'core:upload_document' business.id %}" class="btn-cfo" style="background: var(--accent-blue); color: white; border: none;">
+      + New Deposit
     </a>
   </div>
 </div>
 
-<!-- Registry Section -->
-<div class="card" style="padding: 0;">
-  <div
-    style="padding: 1.25rem; border-bottom: 1px solid var(--border-classic); display: flex; justify-content: space-between; align-items: center; background: #f5f6f7; border-radius: 8px 8px 0 0;">
-    <h3 style="margin: 0; font-size: 1.1rem; font-family: 'Inter', sans-serif; font-weight: 700;">Document Registry</h3>
-    <a href="{% url 'core:documents_list' business.id %}" class="small"
-      style="color: var(--fb-blue); font-weight: 700;">Full Records →</a>
+<div class="cfo-stats">
+  <div class="stat-card">
+    <div class="stat-label">Total Assets / Income</div>
+    <div class="stat-value" style="color: var(--accent-blue);">₹{{ summary.total_income | floatformat:2 }}</div>
   </div>
-  <div style="padding:0">
-    <table style="width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif; font-size: 0.85rem;">
-      <thead style="background: white; border-bottom: 1px solid var(--border-classic);">
-        <tr style="text-align: left; color: var(--text-secondary);">
-          <th style="padding: 0.75rem 1.25rem">Registration Date</th>
-          <th>Classification</th>
-          <th>Reference Identification</th>
-          <th style="text-align: right; padding-right: 1.25rem;">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for doc in business.documents.all|slice:":8" %}
-        {% if forloop.counter|divisibleby:2 %}
-        <tr style="border-bottom: 1px solid var(--border-classic); background: #fafbfc; transition: background 0.1s;">
-          {% else %}
-        <tr style="border-bottom: 1px solid var(--border-classic); background: white; transition: background 0.1s;">
-          {% endif %}
-          <td style="padding: 0.85rem 1.25rem; font-weight: 500;">{{ doc.uploaded_at|date:"d F Y" }}</td>
-          <td><span class="tag tag-info" style="font-size: 0.65rem;">{{ doc.get_doc_type_display }}</span></td>
-          <td class="small" style="font-family: monospace; color: var(--text-main);">#{{ doc.id|stringformat:".8s" }}
-          </td>
-          <td style="text-align: right; padding-right: 1.25rem;">
-            <a href="{% url 'core:document_detail' doc.id %}" class="btn btn-secondary"
-              style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">Review Entry</a>
-          </td>
-        </tr>
-        {% empty %}
+  <div class="stat-card">
+    <div class="stat-label">Total Expense / Burn</div>
+    <div class="stat-value" style="color: #f43f5e;">₹{{ summary.total_expense | floatformat:2 }}</div>
+  </div>
+  <div class="stat-card" style="border-color: var(--accent-gold);">
+    <div class="stat-label">Net Capital / Profit</div>
+    <div class="stat-value" style="color: #10b981;">₹{{ summary.net_profit | floatformat:2 }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Tax Savings (ITC)</div>
+    <div class="stat-value" style="color: var(--accent-gold);">₹{{ summary.tax_savings | floatformat:2 }}</div>
+  </div>
+</div>
+
+<div class="action-grid">
+  <a href="{% url 'ledger:day-book' business.id %}" class="action-tile">
+    <span>📖</span><label>Day Book</label>
+  </a>
+  <a href="{% url 'ledger:trial-balance' business.id %}" class="action-tile">
+    <span>⚖️</span><label>Trial Balance</label>
+  </a>
+  <a href="{% url 'ledger:profit-loss' business.id %}" class="action-tile">
+    <span>📈</span><label>P & L Statement</label>
+  </a>
+  <a href="{% url 'ledger:balance-sheet' business.id %}" class="action-tile">
+    <span>🏛️</span><label>Balance Sheet</label>
+  </a>
+</div>
+
+<div class="entity-registry">
+  <div class="registry-header">
+    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800;">Mission Critical Audit Trail</h3>
+    <a href="{% url 'core:documents_list' business.id %}" style="color: var(--accent-blue); font-size: 0.8rem; font-weight: 700; text-decoration: none;">Full Audit Logs →</a>
+  </div>
+  <table class="modern-table">
+    <thead>
+      <tr>
+        <th>Filing Date</th>
+        <th>Classification</th>
+        <th>Reference ID</th>
+        <th>AI Status</th>
+        <th style="text-align: right;">Authorization</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for doc in business.documents.all|slice:":10" %}
         <tr>
-          <td colspan="4" style="padding: 3rem; text-align: center; color: var(--text-secondary); font-style: italic;">
-            No records found in this entity's ledger.</td>
+          <td style="font-weight: 600;">{{ doc.uploaded_at | date:"d M Y" }}</td>
+          <td><span style="color: var(--text-secondary);">{{ doc.get_doc_type_display }}</span></td>
+          <td style="font-family: 'JetBrains Mono'; font-size: 0.75rem; color: var(--accent-blue);">
+            #{{ doc.id | stringformat:".8s" }}
+          </td>
+          <td>
+            {% if doc.status == 'processed' %}
+              <span style="color: #10b981; font-weight: 700;">✓ Ready</span>
+            {% elif doc.status == 'failed' %}
+              <span style="color: #f43f5e; font-weight: 700;">⚠ Failed</span>
+            {% else %}
+              <span style="color: var(--accent-gold); font-weight: 700;">⚙ Processing</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right;">
+            <a href="{% url 'core:document_detail' doc.id %}" class="btn-cfo">Review Entry</a>
+          </td>
         </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+      {% empty %}
+        <tr>
+          <td colspan="5" style="padding: 4rem; text-align: center; color: var(--text-secondary); font-style: italic;">
+            The audit vault is currently empty.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}

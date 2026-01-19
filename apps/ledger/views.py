@@ -1,13 +1,34 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from apps.common.views.base import ApiView
-from .models import Voucher, Account, AccountGroup, FinancialYear, JournalEntry
+from .models import Voucher, Account, AccountGroup, FinancialYear, JournalEntry, VoucherType
 from core.models import Business
 from .services.ledger_service import LedgerService
 from decimal import Decimal
-from django.db.models import Sum
+from django.db import models
+from django.db.models import Sum, Q
+from django.contrib import messages
 import json
+from .services.automation_service import AutomationService
+
+@login_required
+@require_POST
+def reconcile_ledgers(request, biz_pk):
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    
+    matches_found = AutomationService.reconcile_pending_payments(business)
+    
+    if matches_found > 0:
+        messages.success(request, f"God-Level Reconciliation Complete: {matches_found} payments matched to actual invoices!")
+    else:
+        messages.info(request, "Reconciliation Engine finished: No new matches found currently.")
+        
+    return redirect('ledger:trial-balance', biz_pk=biz_pk)
 
 @login_required
 def day_book_view(request, biz_pk):
@@ -89,12 +110,24 @@ def profit_loss_view(request, biz_pk):
     else:
         business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
     
+    # Professional Aggregation: Single pass for all P&L movements
+    pnl_vouchers = [VoucherType.SALES, VoucherType.PURCHASE, VoucherType.JOURNAL, VoucherType.CREDIT_NOTE, VoucherType.DEBIT_NOTE]
+    
+    balances = JournalEntry.objects.filter(
+        voucher__business=business,
+        voucher__voucher_type__in=pnl_vouchers,
+        voucher__is_draft=False,
+        account__group__classification__in=['INCOME', 'EXPENSE']
+    ).values('account_id').annotate(dr=Sum('debit'), cr=Sum('credit'))
+    
+    bal_map = {b['account_id']: (b['dr'] or Decimal('0')) - (b['cr'] or Decimal('0')) for b in balances}
+
     # 1. Income
     income_accounts = Account.objects.filter(business=business, group__classification='INCOME')
     income_data = []
     total_income = Decimal('0')
     for acc in income_accounts:
-        bal = -LedgerService.get_pnl_balance(acc.id, business=business) # Use P&L specific balance
+        bal = -bal_map.get(acc.id, Decimal('0'))
         if bal != 0:
             income_data.append({'name': acc.name, 'amount': bal})
             total_income += bal
@@ -104,7 +137,7 @@ def profit_loss_view(request, biz_pk):
     expense_data = []
     total_expense = Decimal('0')
     for acc in expense_accounts:
-        bal = LedgerService.get_pnl_balance(acc.id, business=business) # Use P&L specific balance
+        bal = bal_map.get(acc.id, Decimal('0'))
         if bal != 0:
             expense_data.append({'name': acc.name, 'amount': bal})
             total_expense += bal
@@ -129,44 +162,46 @@ def balance_sheet_view(request, biz_pk):
     
     # 1. Assets
     asset_accounts = Account.objects.filter(business=business, group__classification='ASSET')
+    asset_balances = JournalEntry.objects.filter(
+        account__in=asset_accounts, voucher__is_draft=False
+    ).values('account_id').annotate(dr=Sum('debit'), cr=Sum('credit'))
+    
+    asset_map = {b['account_id']: (b['dr'] or Decimal('0')) - (b['cr'] or Decimal('0')) for b in asset_balances}
     assets = []
     total_assets = Decimal('0.00')
-    from django.db.models import Sum
     for acc in asset_accounts:
-        # Use only Posted entries for Balance Sheet integrity
-        entries = JournalEntry.objects.filter(account=acc, voucher__is_draft=False)
-        totals = entries.aggregate(dr=Sum('debit'), cr=Sum('credit'))
-        bal = acc.opening_balance + (totals['dr'] or Decimal('0.00')) - (totals['cr'] or Decimal('0.00'))
-        
+        bal = acc.opening_balance + asset_map.get(acc.id, Decimal('0'))
         if bal != 0:
             assets.append({'name': acc.name, 'amount': bal})
             total_assets += bal
             
     # 2. Liabilities & Equity
     liab_accounts = Account.objects.filter(business=business, group__classification__in=['LIABILITY', 'EQUITY'])
+    liab_balances = JournalEntry.objects.filter(
+        account__in=liab_accounts, voucher__is_draft=False
+    ).values('account_id').annotate(dr=Sum('debit'), cr=Sum('credit'))
+    
+    liab_map = {b['account_id']: (b['dr'] or Decimal('0')) - (b['cr'] or Decimal('0')) for b in liab_balances}
     liabilities = []
     total_liabilities = Decimal('0.00')
     for acc in liab_accounts:
-        entries = JournalEntry.objects.filter(account=acc, voucher__is_draft=False)
-        totals = entries.aggregate(dr=Sum('debit'), cr=Sum('credit'))
-        bal = - (acc.opening_balance + (totals['dr'] or Decimal('0.00')) - (totals['cr'] or Decimal('0.00')))
-        
+        # Liabilities are usually Credit balances (negative in our Dr-Cr math)
+        bal = - (acc.opening_balance + liab_map.get(acc.id, Decimal('0')))
         if bal != 0:
             liabilities.append({'name': acc.name, 'amount': bal})
             total_liabilities += bal
             
     # 3. Incorporate Net Profit/Loss (Elite CFO Standard)
-    income_val = JournalEntry.objects.filter(
-        account__business=business, account__group__classification='INCOME', 
+    pnl = JournalEntry.objects.filter(
+        account__business=business, 
+        account__group__classification__in=['INCOME', 'EXPENSE'], 
         voucher__is_draft=False
-    ).aggregate(net=Sum('credit') - Sum('debit'))['net'] or Decimal('0.00')
+    ).aggregate(
+        inc=Sum('credit', filter=models.Q(account__group__classification='INCOME')) - Sum('debit', filter=models.Q(account__group__classification='INCOME')),
+        exp=Sum('debit', filter=models.Q(account__group__classification='EXPENSE')) - Sum('credit', filter=models.Q(account__group__classification='EXPENSE'))
+    )
     
-    expense_val = JournalEntry.objects.filter(
-        account__business=business, account__group__classification='EXPENSE', 
-        voucher__is_draft=False
-    ).aggregate(net=Sum('debit') - Sum('credit'))['net'] or Decimal('0.00')
-    
-    net_profit = income_val - expense_val
+    net_profit = (pnl['inc'] or Decimal('0')) - (pnl['exp'] or Decimal('0'))
     total_liabilities += net_profit
 
     return render(request, 'ledger/balance_sheet.html', {
@@ -249,14 +284,126 @@ class AccountListView(ApiView):
 
 class TallyExportView(ApiView):
     def get(self, request):
-        if not request.business:
+        doc_id = request.GET.get('document_id')
+        business = request.business
+        
+        if not business and doc_id:
+            # Try to infer business from document if middleware missed it
+            from core.models import Document
+            doc = get_object_or_404(Document, id=doc_id, business__created_by=request.user)
+            business = doc.business
+
+        if not business:
             return self.error_response("Business context required", status=400)
             
         from .services.tally_service import TallyExportService
         from django.http import HttpResponse
         
-        xml_data = TallyExportService.export_business_vouchers(request.business)
+        xml_data = TallyExportService.export_business_vouchers(business, document_id=doc_id)
         
+        filename = f"tally_import_{business.id}.xml"
+        if doc_id: filename = f"tally_doc_{doc_id}.xml"
+
         response = HttpResponse(xml_data, content_type='application/xml')
-        response['Content-Disposition'] = f'attachment; filename="tally_import_{request.business.id}.xml"'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
+
+@login_required
+@require_POST
+def reclassify_entry(request):
+    entry_id = request.POST.get('entry_id')
+    new_account_id = request.POST.get('account_id')
+    
+    if request.user.is_superuser:
+        entry = get_object_or_404(JournalEntry, id=entry_id)
+    else:
+        entry = get_object_or_404(JournalEntry, id=entry_id, voucher__business__created_by=request.user)
+        
+    new_acc = get_object_or_404(Account, id=new_account_id, business=entry.voucher.business)
+    
+    entry.account = new_acc
+    entry.save()
+    
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+@login_required
+@require_POST
+def create_account_and_reclassify(request):
+    """
+    Expert Mode: Create a new ledger on the fly and map the entry to it.
+    """
+    entry_id = request.POST.get('entry_id')
+    account_name = request.POST.get('name')
+    group_id = request.POST.get('group_id')
+
+    if request.user.is_superuser:
+        entry = get_object_or_404(JournalEntry, id=entry_id)
+    else:
+        entry = get_object_or_404(JournalEntry, id=entry_id, voucher__business__created_by=request.user)
+
+    business = entry.voucher.business
+    group = get_object_or_404(AccountGroup, id=group_id, business=business)
+
+    # Create the new account
+    new_acc = Account.objects.create(
+        business=business,
+        group=group,
+        name=account_name,
+        classification=group.classification
+    )
+
+    # Reclassify the entry
+    entry.account = new_acc
+    entry.save()
+
+    messages.success(request, f"Created new ledger '{account_name}' and reclassified entry.")
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+@login_required
+@require_POST
+def record_capital_infusion(request, biz_pk):
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    
+    amount_str = request.POST.get('amount', '0')
+    try:
+        amount = Decimal(amount_str)
+    except:
+        messages.error(request, "Invalid amount.")
+        return redirect('ledger:trial-balance', biz_pk=biz_pk)
+
+    if amount <= 0:
+        messages.error(request, "Amount must be positive.")
+        return redirect('ledger:trial-balance', biz_pk=biz_pk)
+
+    # 1. Identify/Create Ledgers
+    from .services.automation_service import AutomationService
+    bank_acc = AutomationService.get_or_create_default_account(business, "Main Bank Account", "Bank Accounts")
+    capital_acc = AutomationService.get_or_create_default_account(business, "Owner's Capital", "Capital Account")
+
+    # 2. Setup Voucher
+    from datetime import date
+    fy = LedgerService.initialize_financial_year(business)
+
+    voucher_data = {
+        'voucher_type': VoucherType.RECEIPT,
+        'date': date.today(),
+        'fy_id': fy.id,
+        'narration': f"Opening Capital Infusion / Initial Fund | Reference: QuickSetup",
+        'is_draft': False # Posting directly to fix trial balance
+    }
+
+    entries_data = [
+        {'account_id': bank_acc.id, 'debit': amount, 'credit': 0},
+        {'account_id': capital_acc.id, 'debit': 0, 'credit': amount}
+    ]
+
+    try:
+        vch = LedgerService.create_voucher(business, voucher_data, entries_data)
+        messages.success(request, f"Successfully recorded ₹{amount} infusion. Negative equity warnings resolved!")
+    except Exception as e:
+        messages.error(request, f"Failed to record infusion: {e}")
+
+    return redirect('ledger:trial-balance', biz_pk=biz_pk)

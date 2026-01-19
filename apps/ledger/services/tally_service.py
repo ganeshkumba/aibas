@@ -56,9 +56,10 @@ class TallyExportService:
             is_debit = entry.debit > 0
             ET.SubElement(ledger_entry, 'ISDEEMEDPOSITIVE').text = 'Yes' if is_debit else 'No'
             
-            # Tally XML Math: Dr is Negative (-), Cr is Positive (+) in <AMOUNT>
-            amount = -entry.debit if is_debit else entry.credit
-            ET.SubElement(ledger_entry, 'AMOUNT').text = f"{amount:.2f}"
+            # Tally Standard Signage: Dr is Yes (positive), Cr is No (negative)
+            amount = abs(entry.debit if is_debit else entry.credit)
+            final_amount = amount if is_debit else -amount
+            ET.SubElement(ledger_entry, 'AMOUNT').text = f"{final_amount:.2f}"
             
             # Bill Allocations (Statutory Payable/Receivable Tracking)
             if entry.ref_type or (entry.account.group.name in ['Sundry Creditors', 'Sundry Debtors']):
@@ -88,11 +89,13 @@ class TallyExportService:
         return mapping.get(ref_type, 'On Account')
 
     @classmethod
-    def export_business_vouchers(cls, business, start_date=None, end_date=None):
+    def export_business_vouchers(cls, business, start_date=None, end_date=None, document_id=None):
         """
         Generates a full Tally XML for all vouchers of a business.
         """
         vouchers = Voucher.objects.filter(business=business, is_draft=False)
+        if document_id:
+            vouchers = vouchers.filter(document_id=document_id)
         if start_date:
             vouchers = vouchers.filter(date__gte=start_date)
         if end_date:
@@ -141,8 +144,10 @@ class TallyExportService:
             is_debit = entry.debit > 0
             ET.SubElement(ledger_entry, 'ISDEEMEDPOSITIVE').text = 'Yes' if is_debit else 'No'
             
-            amount = -entry.debit if is_debit else entry.credit
-            ET.SubElement(ledger_entry, 'AMOUNT').text = f"{amount:.2f}"
+            # Use correct signage to prevent Tally import bugs
+            amount = abs(entry.debit if is_debit else entry.credit)
+            final_amount = amount if is_debit else -amount
+            ET.SubElement(ledger_entry, 'AMOUNT').text = f"{final_amount:.2f}"
             
             if entry.ref_type or (entry.account.group.name in ['Sundry Creditors', 'Sundry Debtors']):
                 bill_alloc = ET.SubElement(ledger_entry, 'BILLALLOCATIONS.LIST')

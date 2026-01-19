@@ -1,14 +1,63 @@
 {% extends 'core/base.html' %}
 {% block content %}
-  <div class="card">
-    <h2>Documents — {{ business.name }}</h2>
-    {% for d in documents %}
-      <div class="card">
-        <strong>Document {{ d.id }}</strong> • {{ d.doc_type }} • {{ d.uploaded_at }} • Status: {{ d.status }}<br/>
-        <a href="{% url 'core:document_detail' d.id %}">Open</a>
-      </div>
-    {% empty %}
-      <p>No documents yet.</p>
-    {% endfor %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+  <div>
+    <h1 style="margin: 0;">Audit Vault</h1>
+    <div class="small" style="font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">{{ business.name }} | Complete Archive</div>
   </div>
+  <a href="{% url 'core:upload_document' business.id %}" class="btn">+ Upload New</a>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead style="background: #f8f9fa; border-bottom: 1px solid var(--border-classic);">
+      <tr style="text-align: left; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
+        <th style="padding: 1rem 1.5rem;">ID</th>
+        <th>Type</th>
+        <th>Date Uploaded</th>
+        <th>Status</th>
+        <th>Compliance</th>
+        <th style="text-align: right; padding-right: 1.5rem;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in documents %}
+      <tr style="border-bottom: 1px solid var(--border-classic);">
+        <td style="padding: 1.25rem 1.5rem; font-family: monospace; font-weight: 700; color: var(--fb-blue);">#{{ d.id }}</td>
+        <td style="font-weight: 600;">{{ d.get_doc_type_display }}</td>
+        <td class="small">{{ d.uploaded_at | date:"d F Y, H:i" }}</td>
+        <td>
+          {% if d.status == 'processed' %}
+            <span class="tag tag-success">Processed</span>
+          {% elif d.status == 'failed' %}
+            <span class="tag" style="background: #fff1f0; color: #cf1322;">Failed</span>
+          {% else %}
+            <span class="tag tag-info">Processing</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if d.is_msme %}
+            <div style="color: #cf1322; font-weight: 700; font-size: 0.7rem;">MSME DEADLINE:</div>
+            <div class="small" style="font-weight: 700;">{{ d.payment_deadline | date:"d M Y" }}</div>
+          {% elif d.is_b2b %}
+            <span class="tag" style="background: #e6f7ff; color: #0050b3; border: 1px solid #91d5ff;">Standard B2B</span>
+          {% elif d.doc_type == 'receipt' %}
+            <span class="tag" style="background: #fff7e6; color: #d46b08; border: 1px solid #ffd591;">B2C / No ITC</span>
+          {% endif %}
+        </td>
+        <td style="text-align: right; padding-right: 1.5rem;">
+          <a href="{% url 'core:document_detail' d.id %}" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 1rem;">View Details</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" style="padding: 4rem; text-align: center; color: var(--text-secondary);">
+          <div style="font-size: 2rem; margin-bottom: 1rem;">📭</div>
+          No documents found in the vault.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

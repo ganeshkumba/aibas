@@ -22,6 +22,8 @@ urlpatterns = [
     path('businesses/<int:business_id>/documents/', views.documents_list, name='documents_list'),
     path('documents/<int:pk>/', views.document_detail, name='document_detail'),
     path('documents/<int:pk>/approve/', views.approve_vouchers, name='approve_vouchers'),
+    path('documents/<int:pk>/reprocess/', views.reprocess_document, name='reprocess_document'),
+    path('documents/<int:pk>/update-ocr/', views.update_ocr_text, name='update_ocr_text'),
 
     # API Health
     path('api/health/', health, name='api_health'),

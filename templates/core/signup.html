@@ -1,42 +1,46 @@
-{% extends "core/base.html" %}
+{% extends 'core/base.html' %}
 
 {% block content %}
-<div class="card" style="max-width:400px;margin:auto;">
-    <h2>Sign Up</h2>
+<div class="card" style="max-width: 450px; margin: 3rem auto; padding: 2.5rem;">
+  <h2 style="text-align: center; margin-bottom: 2rem;">Join The Ledger</h2>
 
-    <form method="post">
-        {% csrf_token %}
+  <form method="post">
+    {% csrf_token %}
 
+    {% if form.non_field_errors %}
+      <div style="color: #cf1322; background: #fff1f0; padding: 0.75rem; border-radius: 4px; margin-bottom: 1.5rem; font-size: 0.85rem;">
         {{ form.non_field_errors }}
+      </div>
+    {% endif %}
 
-        <div>
-            <label>Full Name</label>
-            {{ form.full_name }}
-            {{ form.full_name.errors }}
+    <div style="margin-bottom: 1.25rem;">
+      <label style="font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Full Name</label>
+      {{ form.full_name }}
+      <div style="color: #cf1322; font-size: 0.75rem;">{{ form.full_name.errors }}</div>
+    </div>
+
+    <div style="margin-bottom: 1.25rem;">
+      <label style="font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Email Address</label>
+      {{ form.email }}
+      <div style="color: #cf1322; font-size: 0.75rem;">{{ form.email.errors }}</div>
+    </div>
+
+    {% for field in form %}
+      {% if field.name == 'password1' or field.name == 'password2' %}
+        <div style="margin-bottom: 1.25rem;">
+          <label style="font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">{{ field.label }}</label>
+          {{ field }}
+          <div style="color: #cf1322; font-size: 0.75rem;">{{ field.errors }}</div>
         </div>
+      {% endif %}
+    {% endfor %}
 
-        <div>
-            <label>Email</label>
-            {{ form.email }}
-            {{ form.email.errors }}
-        </div>
+    <button type="submit" class="btn" style="width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 1rem;">Initialize Account</button>
+  </form>
 
-        {% for field in form %}
-        {% if field.name == 'password1' or field.name == 'password2' %}
-        <div>
-            <label>{{ field.label }}</label>
-            {{ field }}
-            {{ field.errors }}
-        </div>
-        {% endif %}
-        {% endfor %}
-
-        <button type="submit" style="margin-top:15px;">Create Account</button>
-    </form>
-
-    <p style="margin-top:10px;">
-        Already have an account?
-        <a href="{% url 'core:login' %}">Login</a>
-    </p>
+  <p style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem;">
+    Already have an account?
+    <a href="{% url 'core:login' %}" style="color: var(--fb-blue); font-weight: 700; text-decoration: none;">Secure Login</a>
+  </p>
 </div>
 {% endblock %}

@@ -15,4 +15,8 @@ urlpatterns = [
     path('reports/<int:biz_pk>/trial-balance/', views.trial_balance_view, name='trial-balance'),
     path('reports/<int:biz_pk>/pl/', views.profit_loss_view, name='profit-loss'),
     path('reports/<int:biz_pk>/balance-sheet/', views.balance_sheet_view, name='balance-sheet'),
+    path('reclassify-entry/', views.reclassify_entry, name='reclassify-entry'),
+    path('create-account-reclassify/', views.create_account_and_reclassify, name='create-account-reclassify'),
+    path('reports/<int:biz_pk>/capital-infusion/', views.record_capital_infusion, name='capital-infusion'),
+    path('reports/<int:biz_pk>/reconcile/', views.reconcile_ledgers, name='reconcile-ledgers'),
 ]
