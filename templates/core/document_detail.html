@@ -304,6 +304,16 @@
         </select>
       </div>
 
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display:block; font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; margin-bottom:0.5rem;">To / Balancing Account (Constraint)</label>
+        <select name="to_account_id" style="width:100%; background:var(--bg-dark); border:1px solid var(--border-color); color:white; padding:0.5rem; border-radius:4px;">
+          <option value="">Keep Existing...</option>
+          {% for acc in all_accounts %}
+          <option value="{{ acc.id }}">{{ acc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
       <div style="display:flex; gap:1rem; justify-content:flex-end;">
         <button type="button" onclick="closeLedgerModal()" style="background:none; border:none; color:var(--text-dim); cursor:pointer;">Cancel</button>
         <button type="submit" class="btn" style="background:var(--blue-accent); font-size:0.8rem;">Create & Map</button>

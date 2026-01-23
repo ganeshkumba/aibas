@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.contrib import messages
 from apps.ledger.services.ledger_service import LedgerService
 from apps.ledger.services.cfo_service import CFOService
+from apps.common.notifications import NotificationService
 
 # -------------------- AUTH VIEWS --------------------
 @login_not_required
@@ -91,7 +92,15 @@ def business_detail(request, pk):
     else:
         business = get_object_or_404(Business, pk=pk, created_by=request.user)
     summary = CFOService.get_executive_summary(business)
-    return render(request, 'core/business_detail.html', {'business': business, 'summary': summary})
+    calendar = CFOService.get_statutory_calendar(business)
+    notifications = NotificationService.check_and_notify_deadlines(business)
+    
+    return render(request, 'core/business_detail.html', {
+        'business': business, 
+        'summary': summary,
+        'calendar': calendar,
+        'notifications': notifications
+    })
 
 
 # -------------------- DOCUMENTS --------------------
@@ -107,13 +116,24 @@ def upload_document(request, business_id):
             doc_type = form.cleaned_data['doc_type']
             files = request.FILES.getlist('file')
             
+            # Capture Forensic Metadata
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+            
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+
             uploaded_count = 0
             for uploaded_file in files:
                 doc = Document(
                     business=business,
                     uploaded_by=request.user,
                     file=uploaded_file,
-                    doc_type=doc_type
+                    doc_type=doc_type,
+                    upload_ip=ip,
+                    user_agent=user_agent
                 )
                 doc.save()
 

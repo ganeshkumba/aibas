@@ -23,6 +23,8 @@ INSTALLED_APPS = [
     'apps.accounts',
     'apps.ledger',
     'apps.ai_bridge',
+    'apps.inventory',
+    'apps.audit',
 ]
 
 AI_PROVIDER = config('AI_PROVIDER', default='ollama')
@@ -41,6 +43,18 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.accounts.middleware.MultitenancyMiddleware',
 ]
+
+# --- GOD-MODE SECURITY HEADERS ---
+# Prevents XSS, Clickjacking, and MIME-sniffing even in local dev
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+REFERRER_POLICY = 'same-origin'
+# Content Security Policy (Basic)
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com")
+CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com")
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'")
 
 # Security Settings
 if not DEBUG:
@@ -76,6 +90,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / config('DB_NAME', default='db.sqlite3'),
+        'OPTIONS': {
+            'timeout': 10,
+        }
     }
 }
 

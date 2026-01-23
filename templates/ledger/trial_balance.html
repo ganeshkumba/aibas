@@ -34,12 +34,16 @@
       <h1 style="margin-bottom: 0.25rem;">Trial Balance</h1>
       <div class="small" style="color: var(--text-secondary); font-weight: 700;">{{ business.name }} | Statement of Ledger Balances</div>
     </div>
-    <div style="text-align: right; display: flex; align-items: center; gap: 1rem;">
+    <div style="text-align: right; display: flex; align-items: center; gap: 0.75rem;">
+      <form action="{% url 'ledger:run-cleanup' business.id %}" method="POST">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary" style="font-size: 0.7rem; font-weight: 700;">Clean Ledger & Fix Errors</button>
+      </form>
       <form action="{% url 'ledger:reconcile-ledgers' business.id %}" method="POST">
         {% csrf_token %}
         <button type="submit" class="btn reconcile-btn">Reconcile Ledgers (God Mode)</button>
       </form>
-      <div style="text-align: right;">
+      <div style="text-align: right; margin-left: 0.5rem;">
         <div class="small" style="font-weight: 800; color: var(--text-secondary);">STATUS</div>
         {% if total_dr == total_cr %}
           <span class="tag tag-success">Balanced</span>
@@ -124,6 +128,38 @@
   {% if total_dr != total_cr %}
     <div style="margin-top: 1rem; padding: 1rem; background: rgba(207, 19, 34, 0.1); border: 1px solid #cf1322; border-radius: 4px; color: #cf1322;" class="small">
       <strong>Difference in Trial Balance:</strong> Ledger is currently unbalanced. Please review unposted AI drafts.
+    </div>
+  {% endif %}
+
+  {% if snapshots %}
+    <div style="margin-top: 3rem;">
+      <h3 style="font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1rem;">Historical Snapshots (Audit Trail)</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+        <thead>
+           <tr style="border-bottom: 1px solid var(--border-classic); color: var(--text-secondary); text-align: left;">
+             <th style="padding: 0.5rem;">Timestamp</th>
+             <th style="padding: 0.5rem;">Document Ref</th>
+             <th style="padding: 0.5rem; text-align: right;">Total Dr</th>
+             <th style="padding: 0.5rem; text-align: right;">Total Cr</th>
+           </tr>
+        </thead>
+        <tbody>
+          {% for snap in snapshots %}
+            <tr style="border-bottom: 1px solid rgba(128,128,128,0.1);">
+              <td style="padding: 0.75rem 0.5rem; font-weight: 700;">{{ snap.created_at | date:"d M Y H:i" }}</td>
+              <td style="padding: 0.75rem 0.5rem;">
+                {% if snap.document %}
+                  <a href="{% url 'core:document_detail' snap.document_id %}">#{{ snap.document_id | stringformat:".8s" }}</a>
+                {% else %}
+                  System / Manual
+                {% endif %}
+              </td>
+              <td style="padding: 0.75rem 0.5rem; text-align: right;">₹{{ snap.total_debit | floatformat:2 }}</td>
+              <td style="padding: 0.75rem 0.5rem; text-align: right;">₹{{ snap.total_credit | floatformat:2 }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   {% endif %}
 </div>

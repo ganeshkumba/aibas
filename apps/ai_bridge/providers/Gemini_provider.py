@@ -49,6 +49,8 @@ class BankTransactionSchema(BaseModel):
     debit: float = 0.0
     credit: float = 0.0
     balance: float = 0.0
+    category: Optional[str] = None
+    purpose: Optional[str] = None
 
 class BankStatementSchema(BaseModel):
     account_number: Optional[str] = None
@@ -94,20 +96,37 @@ class GeminiProvider(BaseAIProvider):
         try:
             # MULTIMODAL payload
             payload = [prompt]
+            has_file = False
             if file_path and os.path.exists(file_path):
                 mime_type, _ = mimetypes.guess_type(file_path)
-                with open(file_path, "rb") as f:
-                    payload.append({
-                        "mime_type": mime_type or "image/jpeg",
-                        "data": f.read()
-                    })
-            else:
+                try:
+                    with open(file_path, "rb") as f:
+                        payload.append({
+                            "mime_type": mime_type or "image/jpeg",
+                            "data": f.read()
+                        })
+                        has_file = True
+                except Exception as e:
+                    logger.warning(f"[Gemini] Could not read file {file_path}: {e}. Falling back to text.")
+            
+            if not has_file:
                 payload.append(text)
 
-            response = self.model.generate_content(
-                payload,
-                generation_config={"response_mime_type": "application/json", "temperature": 0}
-            )
+            try:
+                response = self.model.generate_content(
+                    payload,
+                    generation_config={"response_mime_type": "application/json", "temperature": 0}
+                )
+            except Exception as multimodal_err:
+                if has_file and text and text.strip():
+                    logger.warning(f"[Gemini] Multimodal failed: {multimodal_err}. Retrying with text-only.")
+                    # Fallback to Text-only if multimodal fails (e.g. corrupt PDF)
+                    response = self.model.generate_content(
+                        [prompt, text],
+                        generation_config={"response_mime_type": "application/json", "temperature": 0}
+                    )
+                else:
+                    raise multimodal_err
             
             raw_data = json.loads(response.text)
 
@@ -128,13 +147,24 @@ class GeminiProvider(BaseAIProvider):
 
     def _get_bank_prompt(self, text: str) -> str:
         return f"""
-TASK: Extract bank transactions into structured registry.
+TASK: Extract bank transactions into structured registry. 
+Ensure you identify the PURPOSE of the transaction (e.g., Bank Charges, Interest, GST Payment, Vendor Payment, Customer Receipt).
+
 JSON STRUCTURE:
 {{
   "account_number": "...",
   "bank_name": "...",
   "transactions": [
-    {{ "date": "YYYY-MM-DD", "description": "...", "reference_no": "...", "debit": 0.0, "credit": 0.0, "balance": 0.0 }}
+    {{ 
+      "date": "YYYY-MM-DD", 
+      "description": "...", 
+      "reference_no": "...", 
+      "debit": 0.0, 
+      "credit": 0.0, 
+      "balance": 0.0,
+      "category": "e.g. Bank Charges, Interest Income, Professional Fees, Sales Receipt",
+      "purpose": "Briefly explain what this transaction is for"
+    }}
   ],
   "accounting_logic": "Explain any reconciliation notes here"
 }}

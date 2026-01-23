@@ -52,16 +52,19 @@ class DocumentProcessor:
             return
 
         try:
-            # 1. OCR Stage
-            if not self.document.ocr_text:
-                self._perform_ocr()
-            
-            # If using Gemini, we don't strictly need local OCR text as it has Vision
+            # 0. Check Provider
             is_gemini = getattr(settings, 'AI_PROVIDER', '').lower() == 'gemini'
-            if not self.document.ocr_text.strip() and not is_gemini:
-                self._fail("OCR_PROCESS", "No legible text found in document.")
-                return
 
+            # 1. OCR Stage - Only if not using Gemini or if specifically needed
+            if not self.document.ocr_text and not is_gemini:
+                try:
+                    self._perform_ocr()
+                except Exception as e:
+                    logger.warning(f"Local OCR failed for doc {self.document.id}: {e}. Provider is {settings.AI_PROVIDER}")
+                    if not is_gemini:
+                        self._fail("OCR_PROCESS", f"OCR failed: {str(e)}")
+                        return
+            
             # 2. AI Stage (With Concurrency Control)
             logger.info(f"Doc {self.document.id}: Waiting for AI slot...")
             with ai_semaphore:
@@ -98,6 +101,16 @@ class DocumentProcessor:
             from PIL import Image, ImageOps
             if filepath.lower().endswith('.pdf'):
                 with pdfplumber.open(filepath) as pdf:
+                    # Forensic Point: Extract File Metadata (ERR-351)
+                    if pdf.metadata:
+                        self.document.file_metadata = pdf.metadata
+                        # Check for 'Internal IP' creation or suspicious producers
+                        producer = str(pdf.metadata.get('Producer', '')).lower()
+                        author = str(pdf.metadata.get('Author', '')).lower()
+                        if 'internal' in producer or 'desktop' in author:
+                            self.document.is_suspicious = True
+                            self.document.suspicion_reason = f"Suspicious PDF Metadata: Created by {author} via {producer}"
+
                     for page in pdf.pages:
                         extracted = page.extract_text()
                         if extracted and len(extracted.strip()) > 10:
@@ -185,6 +198,7 @@ class DocumentProcessor:
                 self._process_invoice_lines(ai_data)
 
     def _process_bank_transactions(self, transactions):
+        new_items = []
         for tx in transactions:
             item = ExtractedLineItem(document=self.document)
             item.date = self._parse_date(tx.get('date'))
@@ -198,17 +212,22 @@ class DocumentProcessor:
             item.credit = credit
             
             # Smart Defaulting for Bank Statements
-            item.ledger_account = 'Pending Classification'
+            item.ledger_account = tx.get('category') or 'Pending Classification'
+            item.description = tx.get('purpose')
             
             item.invoice_no = tx.get('reference_no')
             item.raw = tx
-            item.save()
+            new_items.append(item)
+        
+        if new_items:
+            ExtractedLineItem.objects.bulk_create(new_items)
 
     def _process_invoice_lines(self, ai_data):
         vendor = ai_data.get('vendor')
         vendor_gstin = ai_data.get('vendor_gstin')
         invoice_no = ai_data.get('invoice_no')
         
+        new_items = []
         for li in ai_data.get('line_items', []):
             item = ExtractedLineItem(document=self.document)
             item.vendor = vendor
@@ -221,7 +240,10 @@ class DocumentProcessor:
             item.hsn_code = li.get('hsn_code')
             item.ledger_account = li.get('ledger_suggestion') or "Uncategorized"
             item.raw = li
-            item.save()
+            new_items.append(item)
+            
+        if new_items:
+            ExtractedLineItem.objects.bulk_create(new_items)
 
     def _bridge_to_ledger(self):
         """Converts extracted lines to double-entry vouchers"""

@@ -1,0 +1,125 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<style>
+    .audit-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .integrity-indicator {
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+        background: #f6ffed;
+        border: 2px solid #52c41a;
+        color: #52c41a;
+        margin-bottom: 2rem;
+    }
+
+    .indicator-failed {
+        background: #fff1f0;
+        border-color: #f5222d;
+        color: #f5222d;
+    }
+
+    .metric-box {
+        background: var(--card-background);
+        border: 1px solid var(--border-classic);
+        padding: 1.5rem;
+        border-radius: 8px;
+    }
+
+    .performance-bar {
+        height: 10px;
+        background: var(--btn-secondary-bg);
+        border-radius: 5px;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+
+    .bar-fill {
+        height: 100%;
+        background: var(--fb-blue);
+    }
+</style>
+
+<div style="background: var(--old-money-navy); color: white; padding: 2.5rem; border-radius: 12px; margin-bottom: 2rem;">
+    <h1 style="color: white; margin: 0;">Security & Performance Audit</h1>
+    <p style="opacity: 0.8; margin-top: 0.5rem;">System-wide integrity verification and bottleneck analysis.</p>
+</div>
+
+{% if integrity_issues %}
+    <div class="integrity-indicator indicator-failed">
+        <h2 style="color: inherit; margin-bottom: 0.5rem;">⚠️ System Integrity Compromised</h2>
+        <p>Hash-chain breaks detected in the Audit Logs. Possible unauthorized database tampering.</p>
+    </div>
+{% else %}
+    <div class="integrity-indicator">
+        <h2 style="color: inherit; margin-bottom: 0.5rem;">🛡️ Integrity Verified</h2>
+        <p>All Audit Logs are cryptographically chained. No tampering detected.</p>
+    </div>
+{% endif %}
+
+<div class="audit-grid">
+    <div class="metric-box">
+        <h3 style="margin-bottom: 1rem;">Database Performance</h3>
+        <div style="font-size: 2rem; font-weight: 800; color: var(--fb-blue);">{{ db_latency|floatformat:1 }} ms</div>
+        <div class="small">Query Latency (Aggregation Pass)</div>
+        
+        <div class="performance-bar">
+            <div class="bar-fill" style="width: {% if db_latency < 50 %}20%{% elif db_latency < 200 %}60%{% else %}100%{% endif %};"></div>
+        </div>
+        <div class="small" style="margin-top: 0.5rem;">
+            {% if db_latency < 100 %}Optimal Performance{% else %}Indexing Recommended{% endif %}
+        </div>
+    </div>
+
+    <div class="metric-box">
+        <h3 style="margin-bottom: 1rem;">Audited Transactions</h3>
+        <div style="font-size: 2rem; font-weight: 800;">{{ log_count }}</div>
+        <div class="small">Total Logged Actions in Hash-Chain</div>
+        <div style="margin-top: 1rem;">
+             <span class="tag tag-success">Active Protection</span>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <h3 style="margin-bottom: 1.5rem;">🔥 High-Traffic Ledgers (Optimization Candidates)</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+         <thead>
+             <tr style="text-align: left; font-size: 0.75rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-classic);">
+                 <th style="padding: 1rem;">Account Name</th>
+                 <th style="padding: 1rem;">Entry Volume</th>
+                 <th style="padding: 1rem;">Performance Path</th>
+             </tr>
+         </thead>
+         <tbody>
+             {% for acc in db_hotspots %}
+                 <tr style="border-bottom: 1px solid rgba(128,128,128,0.05);">
+                     <td style="padding: 1rem; font-weight: 700;">{{ acc.name }}</td>
+                     <td style="padding: 1rem;">{{ acc.entry_count }} entries</td>
+                     <td style="padding: 1rem;">
+                         <span class="tag" style="background: rgba(59, 89, 152, 0.1); color: var(--fb-blue);">Indexed</span>
+                     </td>
+                 </tr>
+             {% endfor %}
+         </tbody>
+    </table>
+</div>
+
+{% if integrity_issues %}
+<div class="card" style="margin-top: 2rem; border-color: #f5222d;">
+    <h3 style="color: #f5222d; margin-bottom: 1rem;">Integrity Issues Found</h3>
+    <ul>
+        {% for issue in integrity_issues %}
+            <li style="color: #f5222d; margin-bottom: 0.5rem;">{{ issue }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% endblock %}

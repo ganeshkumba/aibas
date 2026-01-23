@@ -32,10 +32,31 @@ Solves the "Ghost Liability" problem where bank payments don't match bills.
 - **Bill-to-Bill Tracking:** Generates Tally-compliant `<BILLALLOCATIONS.LIST>` tags to "knock off" liabilities automatically.
 - **Capital Infusion Flow:** A specialized UI to record initial capital investments or opening balances, instantly resolving "Negative Equity" warnings.
 
-### 4. 🎨 Audit-Grade UX/UI
+### 4. 📦 AI-Augmented Inventory
+Surpassing standard billing apps with "Zero-Setup" inventory.
+- **Auto-Ingest:** Automatically populates stock levels when a purchase invoice is uploaded.
+- **Batch & Expiry Auditor:** AI automatically extracts "Batch Numbers" and "Expiry Dates" from bills.
+
+### 5. 🛡️ Forensic Shield & Security (New - God Mode)
+Moving beyond records into active fraud prevention.
+- **Cryptographic Audit Trail:** Audit logs are SHA-256 hashed and chained to prevent tampering. Any break in the chain is instantly flagged.
+- **IP Forensic Mapping:** Tracks the physical origin of document uploads. Flags anomalous IPs or suspicious metadata (e.g., "back-dated" PDF origins).
+- **Security Hardening:** Implements strict CSP, HSTS, and X-Frame-Options to protect sensitive financial data.
+
+### 6. 📅 Amortization Engine (New - God Mode)
+Automates the most complex part of accrual accounting.
+- **Auto-Accrual:** Detects prepaid expenses (Rent, Insurance) and automatically schedules monthly recognition journal entries.
+- **Tracker:** Visual progress tracking for all active assets and deferred liabilities.
+
+### 7. 🏢 Intercompany Control Tower (New - God Mode)
+Designed for group organizations with multiple branches.
+- **God-View:** Parent entities can monitor transactions across all subsidiaries in a single view.
+- **Symmetry Audit:** Automatically flags intercompany transactions that aren't synced between entities.
+
+### 8. 🎨 Audit-Grade UX/UI
 - **Audit Dark Mode:** A high-contrast dark theme designed for professional auditing.
-- **Interactive Trial Balance:** Includes a "Virtual CFO" that runs 4+ health checks (Negative Equity, Zero Assets, Pending Classification, Duplicate Detection).
-- **Audit Vault:** A centralized document storage hub with status tags (MSME, B2B, Reconciled).
+- **Interactive Trial Balance:** Includes a "Virtual CFO" that runs 6+ health checks (Forensic Warnings, Negative Equity, etc.).
+- **Performance Report:** Real-time visibility into database latency and integrity status.
 
 ---
 

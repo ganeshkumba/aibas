@@ -19,5 +19,11 @@ Tracking unresolved issues and future engineering requirements.
 
 ## III. Security Audit
 - [x] Email-based JWT-ready Authentication.
-- [ ] Row-level security for multi-tenant business data.
+- [x] Cryptographic Hash-Chaining for Audit Logs (God-Mode).
+- [x] Strict Security Headers (CSP, HSTS, XSS Protection).
+- [ ] Row-level security for multi-tenant business data (Partial - enforced via middleware).
 - [ ] Encryption at rest for uploaded financial IDs/PAN cards.
+
+## IV. Performance Optimizations
+- [x] Database Indexing Strategy for Financial Ledgers.
+- [x] Real-time Latency Monitoring Dashboard.

@@ -1,0 +1,199 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<style>
+    .forensic-hero {
+        background: linear-gradient(135deg, #1a2a4b 0%, #0a0e17 100%);
+        color: white;
+        padding: 3rem 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .forensic-hero::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at top right, rgba(0, 255, 255, 0.1) 0%, transparent 60%);
+        pointer-events: none;
+    }
+
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--card-background);
+        border: 1px solid var(--border-classic);
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--fb-blue);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: var(--text-secondary);
+        letter-spacing: 1px;
+    }
+
+    .suspicious-table {
+        width: 100%;
+        border-toggle: collapse;
+    }
+
+    .suspicious-table th {
+        text-align: left;
+        padding: 1rem;
+        background: rgba(207, 19, 34, 0.05);
+        color: #cf1322;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        border-bottom: 2px solid #cf1322;
+    }
+
+    .suspicious-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-classic);
+        vertical-align: top;
+    }
+
+    .warning-row {
+        background: rgba(207, 19, 34, 0.02);
+    }
+
+    .meta-tag {
+        font-family: monospace;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        background: var(--btn-secondary-bg);
+        border-radius: 3px;
+    }
+</style>
+
+<div class="forensic-hero">
+    <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #00d2ff; margin-bottom: 1rem;">
+        Financial Firewall Activated
+    </div>
+    <h1 style="color: white; margin-bottom: 1rem; font-size: 2.5rem;">Forensic Auditor</h1>
+    <p style="opacity: 0.8; max-width: 600px;">
+        Real-time fraud detection, metadata analysis, and IP fingerprinting. The system is currently monitoring all document uploads for inconsistencies and collusion patterns.
+    </p>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-value" style="color: #cf1322;">{{ suspicious_docs.count }}</div>
+        <div class="stat-label">Flagged Documents</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ ip_stats.count }}</div>
+        <div class="stat-label">Unique Source IPs</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" style="color: #52c41a;">100%</div>
+        <div class="stat-label">System Integrity</div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 1.5rem;">🚨 Suspicious Activities & Alerts</h3>
+    {% if suspicious_docs %}
+        <table class="suspicious-table">
+            <thead>
+                <tr>
+                    <th>Document / Date</th>
+                    <th>Forensic Warning</th>
+                    <th>Technical Metadata</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in suspicious_docs %}
+                    <tr class="warning-row">
+                        <td>
+                            <div style="font-weight: 700;">#{{ doc.id | stringformat:".8s" }}</div>
+                            <div class="small">{{ doc.uploaded_at | date:"d M Y H:i" }}</div>
+                        </td>
+                        <td>
+                            <div style="color: #cf1322; font-weight: 800; font-size: 0.85rem; margin-bottom: 0.5rem;">
+                                {{ doc.suspicion_reason }}
+                            </div>
+                            <div class="small">Detected via Neural Logic Bridge</div>
+                        </td>
+                        <td>
+                            <div style="margin-bottom: 0.5rem;">
+                                <span class="meta-tag">IP: {{ doc.upload_ip }}</span>
+                                <span class="meta-tag">User-Agent: {{ doc.user_agent | truncatechars:20 }}</span>
+                            </div>
+                            <div class="small">
+                                <strong>PDF Meta:</strong> 
+                                {% for k, v in doc.file_metadata.items %}
+                                    {{ k }}: {{ v }}{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                    None
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{% url 'core:document_detail' doc.id %}" class="btn btn-secondary" style="font-size: 0.7rem;">Review</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🛡️</div>
+            <h4>Clean Slate</h4>
+            <div class="small">No suspicious documents detected in the current audit period.</div>
+        </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 1.5rem;">🌐 IP Fingerprint Distribution</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="text-align: left; font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; border-bottom: 1px solid var(--border-classic);">
+                <th style="padding: 0.75rem;">Source IP Address</th>
+                <th style="padding: 0.75rem;">Document Volume</th>
+                <th style="padding: 0.75rem;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ip in ip_stats %}
+                <tr style="border-bottom: 1px solid rgba(128,128,128,0.05);">
+                    <td style="padding: 1rem; font-family: monospace; font-weight: 700;">{{ ip.upload_ip|default:"Local/Internal" }}</td>
+                    <td style="padding: 1rem;">{{ ip.count }} documents</td>
+                    <td style="padding: 1rem;">
+                        {% if ip.count > 10 %}
+                            <span class="tag" style="background: rgba(212, 56, 13, 0.1); color: #d4380d;">High Frequency</span>
+                        {% else %}
+                            <span class="tag" style="background: rgba(82, 196, 26, 0.1); color: #52c41a;">Safe</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

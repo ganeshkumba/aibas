@@ -345,6 +345,20 @@
                     <a href="{% url 'ledger:trial-balance' business.id %}"><span>⚖️</span> Trial Balance</a>
                     <a href="{% url 'ledger:profit-loss' business.id %}"><span>📈</span> Profit & Loss</a>
                     <a href="{% url 'ledger:balance-sheet' business.id %}"><span>📉</span> Balance Sheet</a>
+                    
+                    <div class="sidebar-section">God-Mode Access</div>
+                    <a href="{% url 'ledger:forensic-dashboard' business.id %}" class="{% if request.resolver_match.url_name == 'forensic-dashboard' %}active{% endif %}">
+                        <span>🕵️</span> Forensic Shield
+                    </a>
+                    <a href="{% url 'ledger:amortization-tracker' business.id %}" class="{% if request.resolver_match.url_name == 'amortization-tracker' %}active{% endif %}">
+                        <span>📅</span> Amortization
+                    </a>
+                    <a href="{% url 'ledger:intercompany-tower' business.id %}" class="{% if request.resolver_match.url_name == 'intercompany-tower' %}active{% endif %}">
+                        <span>🌐</span> Group Sync
+                    </a>
+                    <a href="{% url 'ledger:security-audit' business.id %}" class="{% if request.resolver_match.url_name == 'security-audit' %}active{% endif %}">
+                        <span>🛡️</span> Security & Perf
+                    </a>
                 {% else %}
                     <a href="{% url 'core:business_create' %}"><span>➕</span> Register Business</a>
                 {% endif %}
