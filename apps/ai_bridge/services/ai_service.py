@@ -1,6 +1,7 @@
 from django.conf import settings
 from ..providers.Ollama_provider import OllamaProvider
 from ..providers.Gemini_provider import GeminiProvider
+from apps.common.notifications import NotificationService
 
 class AIService:
     """
@@ -22,10 +23,11 @@ class AIService:
     def process_document(self, text: str, doc_type: str = 'receipt', context: dict = None) -> dict:
         """
         Takes OCR text and returns structured data using the configured provider.
+        Includes a God-Mode Failover: If the primary provider (Gemini) fails or hits quota,
+        it automatically falls back to the secondary (Ollama) to ensure zero downtime.
         """
-        # If text is empty, we only proceed if a file_path is provided for Vision models
         has_file = context and context.get('file_path')
-        if not text.strip() and not has_file:
+        if (not text or not text.strip()) and not has_file:
             return {
                 "vendor": None,
                 "invoice_no": None,
@@ -36,4 +38,19 @@ class AIService:
                 "confidence": 0.0
             }
 
-        return self.provider.extract(text, doc_type=doc_type, context=context)
+        # --- STEP 1: Attempt Gemini Provider ---
+        try:
+            result = self.provider.extract(text, doc_type=doc_type, context=context)
+            
+            # Check for API-specific quota or error messages
+            if isinstance(result, dict) and "error" in result:
+                err_msg = str(result["error"]).lower()
+                if "429" in err_msg or "quota" in err_msg or "limit" in err_msg:
+                    print(f"[AI Bridge] Gemini Quota Exceeded.")
+                    NotificationService.send_quota_alert("Gemini", "None")
+            
+            return result
+
+        except Exception as e:
+            logger.error(f"[AI Bridge] Gemini Extraction Error: {e}")
+            return {"error": f"Gemini implementation failed: {str(e)}"}

@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.core.exceptions import ValidationError
 from decimal import Decimal
-from ..models import Voucher, JournalEntry, Account, FinancialYear, VoucherSeries, AccountGroup, VoucherType
+from ..models import Voucher, JournalEntry, Account, FinancialYear, VoucherSeries, AccountGroup, VoucherType, DayBook, TrialBalanceSnapshot, ProfitAndLossSnapshot
 import datetime
 import hashlib
 
@@ -32,11 +32,16 @@ class LedgerService:
     def generate_fingerprint(business_id, date, amount, narration="", voucher_type=""):
         """
         CA-Grade Point: Idempotency / Duplicate Control
-        hash(business_id + date + amount + narration_snippet + type)
+        hash(business_id + date + amount + sanitized_narration + type)
         """
-        # Clean narration to avoid minor variations
-        clean_narr = (narration or "")[:20].upper().strip()
-        payload = f"{business_id}|{date}|{amount}|{clean_narr}|{voucher_type}"
+        # Clean narration aggressively: Remove digits, special chars, and extra spaces
+        # (Mistake: REC/0024 Duplicate detection failed likely due to minor narration drift)
+        import re
+        clean_narr = re.sub(r'[^A-Z]', '', (narration or "").upper())
+        # Use first 30 alpha chars as the stable anchor
+        clean_narr = clean_narr[:30]
+        
+        payload = f"{business_id}|{date}|{amount:.2f}|{clean_narr}|{voucher_type}"
         return hashlib.sha256(payload.encode()).hexdigest()
 
     @staticmethod
@@ -136,7 +141,22 @@ class LedgerService:
                 ref_number=entry.get('ref_number')
             )
 
-        # 8. Final Math Balance
+        # 8. Create Day Book Entry (Flattened Perspective)
+        from apps.ledger.models import DayBook
+        dr_parts = [e.account.name for e in voucher.entries.filter(debit__gt=0)]
+        cr_parts = [e.account.name for e in voucher.entries.filter(credit__gt=0)]
+        particulars = f"Dr {', '.join(dr_parts)} To {', '.join(cr_parts)}"
+        
+        DayBook.objects.create(
+            business=business,
+            document=voucher.document,
+            voucher=voucher,
+            date=voucher.date,
+            particulars=particulars,
+            amount=total_debit or total_credit
+        )
+
+        # 9. Final Math Balance
         if abs(total_debit - total_credit) > Decimal('0.01'):
             raise ValidationError(f"Accounting Imbalance: Sum Dr ({total_debit}) != Sum Cr ({total_credit})")
 
@@ -152,8 +172,7 @@ class LedgerService:
         acc, _ = Account.objects.get_or_create(
             business=business,
             name="Pending Classification",
-            group=group,
-            defaults={'help_text': 'Used for settlements awaiting invoice identification (Elite CFO Standard)'}
+            group=group
         )
         return acc
 
@@ -167,8 +186,7 @@ class LedgerService:
         acc, _ = Account.objects.get_or_create(
             business=business, 
             name="Suspense Account",
-            group=group,
-            defaults={'help_text': 'Temporary parking for entries with questionable classification'}
+            group=group
         )
         return acc
 
@@ -353,7 +371,101 @@ class LedgerService:
                 'code': 'NEGATIVE_EQUITY'
             })
 
+        # 5. Forensic Shield Health Checks (GOD-MODE)
+        from core.models import Document
+        suspicious_docs = Document.objects.filter(business=business, is_suspicious=True)
+        if suspicious_docs.exists():
+            checks.append({
+                'severity': 'CRITICAL',
+                'message': f"Forensic Alert: {suspicious_docs.count()} documents have been flagged for metadata anomalies or IP mismatches (Potential Fraud).",
+                'code': 'FORENSIC_SUSPICION'
+            })
+
+        # 6. Intercompany Mismatch (Symmetry Audit)
+        if business.is_intercompany_enabled:
+            # Check for high-value transactions without Intercompany Sync note
+            unsynced_docs = Document.objects.filter(
+                business=business,
+                is_processed=True
+            ).exclude(accounting_logic__icontains="[Intercompany Sync]")
+            
+            # (Just a simple indicator for now, can be expanded to full cross-entity query)
+            pass
+
         return checks
+
+    @staticmethod
+    @transaction.atomic
+    def smart_cleanup(business):
+        """
+        UNIVERSAL CORRECTIONS PROTOCOL (Section 7)
+        1. Fixes naming/typos.
+        2. Merges duplicate accounts.
+        3. Identifies and removes duplicate vouchers like REC/0024.
+        """
+        from apps.ledger.services.automation_service import AutomationService
+        corrections = []
+        
+        # 1. Account Cleanup (Naming & Merging)
+        accounts = Account.objects.filter(business=business)
+        name_map = {} # normalized_name -> list of account objects
+        
+        for acc in accounts:
+            old_name = acc.name
+            new_name = AutomationService.normalize_ledger_name(old_name)
+            
+            if old_name != new_name:
+                acc.name = new_name
+                acc.save()
+                corrections.append(f"Fixed account name: '{old_name}' -> '{new_name}'")
+            
+            # Group for merging duplicates (Section 2.2)
+            if new_name not in name_map:
+                name_map[new_name] = []
+            name_map[new_name].append(acc)
+            
+        # 2. Merge Duplicate Accounts (Section 2.2)
+        for name, acc_list in name_map.items():
+            if len(acc_list) > 1:
+                primary = acc_list[0]
+                duplicates = acc_list[1:]
+                for dup in duplicates:
+                    # Point: Transfer all transactions to primary (Step 3 of Section 2.2)
+                    JournalEntry.objects.filter(account=dup).update(account=primary)
+                    corrections.append(f"Merged duplicate account {dup.id} into {primary.name}")
+                    dup.delete()
+
+        # 3. Duplicate Voucher Elimination (Section 2.2)
+        # Specifically targeting REC/0024 logic and general fingerprints
+        vouchers = Voucher.objects.filter(business=business).order_by('created_at')
+        fp_map = {}
+        for v in vouchers:
+            # Re-calculate fingerprint with the new aggressive logic
+            fp = LedgerService.generate_fingerprint(business.id, v.date, v.total_amount, v.narration, v.voucher_type)
+            if v.fingerprint != fp:
+                v.fingerprint = fp
+                v.save()
+                
+            if fp in fp_map:
+                v_num = v.voucher_number
+                corrections.append(f"Deleted duplicate voucher: {v_num} (Matches {fp_map[fp]})")
+                v.delete()
+            else:
+                fp_map[fp] = v.voucher_number
+
+        # 4. Narration Polish (Section 2.1)
+        for v in Voucher.objects.filter(business=business):
+            if v.narration:
+                old_n = v.narration
+                # Correcting common narration typos or messy formatting
+                new_n = old_n.replace(" / ", "/").replace(" - ", "-")
+                if " [REPAIRED" in new_n: continue # Skip already corrected
+                
+                if old_n != new_n:
+                    v.narration = new_n
+                    v.save()
+        
+        return corrections
 
     @staticmethod
     @transaction.atomic
@@ -400,3 +512,141 @@ class LedgerService:
                     v.save()
 
         return corrections
+
+    @staticmethod
+    def generate_financial_snapshots(business, document=None):
+        """
+        GOD-MODE: Captures the entire financial state into persistent models.
+        """
+        today = datetime.date.today()
+        
+        # 1. Trial Balance Snapshot
+        balances = JournalEntry.objects.filter(
+            voucher__business=business, 
+            voucher__is_draft=False
+        ).values('account_id', 'account__name', 'account__group__name').annotate(
+            dr_total=Sum('debit'),
+            cr_total=Sum('credit')
+        )
+        
+        tb_data = []
+        total_dr = Decimal('0.00')
+        total_cr = Decimal('0.00')
+        
+        # Include opening balances
+        accounts = Account.objects.filter(business=business).select_related('group')
+        bal_map = {b['account_id']: (b['dr_total'] or Decimal('0')) - (b['cr_total'] or Decimal('0')) for b in balances}
+        
+        for acc in accounts:
+            movement = bal_map.get(acc.id, Decimal('0'))
+            bal = acc.opening_balance + movement
+            if bal != 0:
+                dr = bal if bal > 0 else 0
+                cr = -bal if bal < 0 else 0
+                tb_data.append({
+                    'account': acc.name,
+                    'group': acc.group.name,
+                    'debit': float(dr),
+                    'credit': float(cr)
+                })
+                total_dr += dr
+                total_cr += cr
+        
+        TrialBalanceSnapshot.objects.create(
+            business=business,
+            document=document,
+            date=today,
+            total_debit=total_dr,
+            total_credit=total_cr,
+            is_balanced=abs(total_dr - total_cr) < 0.01,
+            data_snapshot={'entries': tb_data}
+        )
+
+        # 2. Profit & Loss Snapshot
+        # (Simplified period: Current Financial Year)
+        fy = LedgerService.initialize_financial_year(business)
+        
+        pnl_balances = JournalEntry.objects.filter(
+            voucher__business=business,
+            voucher__is_draft=False,
+            account__group__classification__in=['INCOME', 'EXPENSE']
+        ).values('account_id', 'account__name', 'account__group__classification').annotate(dr=Sum('debit'), cr=Sum('credit'))
+        
+        income_data = []
+        expense_data = []
+        total_inc = Decimal('0')
+        total_exp = Decimal('0')
+        
+        for b in pnl_balances:
+            bal = (b['dr'] or Decimal('0')) - (b['cr'] or Decimal('0'))
+            if b['account__group__classification'] == 'INCOME':
+                actual_bal = -bal
+                income_data.append({'name': b['account__name'], 'amount': float(actual_bal)})
+                total_inc += actual_bal
+            else:
+                expense_data.append({'name': b['account__name'], 'amount': float(bal)})
+                total_exp += bal
+                
+        ProfitAndLossSnapshot.objects.create(
+            business=business,
+            document=document,
+            period_start=fy.start_date,
+            period_end=fy.end_date,
+            net_profit=total_inc - total_exp,
+            income_json={'entries': income_data, 'total': float(total_inc)},
+            expense_json={'entries': expense_data, 'total': float(total_exp)}
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def post_scheduled_amortizations(business, target_date=None):
+        """
+        Sweeps all active AmortizationSchedules and posts monthly journals.
+        Ref: ERR-005, 101, 151
+        """
+        from apps.ledger.models import AmortizationSchedule, AmortizationMovement, Voucher, VoucherType
+        from django.utils import timezone
+        
+        if not target_date:
+            target_date = datetime.date.today()
+            
+        movements = AmortizationMovement.objects.filter(
+            schedule__business=business,
+            schedule__is_active=True,
+            date__lte=target_date,
+            is_posted=False
+        ).select_related('schedule', 'schedule__asset_account', 'schedule__expense_account', 'schedule__voucher__financial_year')
+        
+        posted_count = 0
+        for move in movements:
+            schedule = move.schedule
+            asset_acc = schedule.asset_account
+            expense_acc = schedule.expense_account
+            amount = move.amount
+            
+            # Create the Journal Voucher
+            voucher_data = {
+                'voucher_type': VoucherType.JOURNAL,
+                'date': move.date,
+                'fy_id': schedule.voucher.financial_year_id,
+                'narration': f"Amortization: Monthly release from {asset_acc.name} to {expense_acc.name}",
+                'is_draft': False # Posting definitively
+            }
+            
+            # Dr Expense, Cr Asset
+            entries_data = [
+                {'account_id': expense_acc.id, 'debit': amount, 'credit': 0},
+                {'account_id': asset_acc.id, 'debit': 0, 'credit': amount}
+            ]
+            
+            try:
+                vch = LedgerService.create_voucher(business, voucher_data, entries_data)
+                move.journal_voucher = vch
+                move.is_posted = True
+                move.save()
+                posted_count += 1
+            except Exception as e:
+                print(f"Failed to post amortization {move.id}: {e}")
+                
+        return posted_count
+

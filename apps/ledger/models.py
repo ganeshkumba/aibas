@@ -55,9 +55,15 @@ class Account(models.Model):
     opening_balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
     
     # Fixed nature derived from group at creation
-    classification = models.CharField(max_length=20, choices=AccountGroup.Classification.choices, default='ASSET')
+    classification = models.CharField(max_length=20, choices=AccountGroup.Classification.choices, default='ASSET', db_index=True)
     is_system_reserved = models.BooleanField(default=False)
     
+    class Meta:
+        indexes = [
+            models.Index(fields=['business', 'classification']),
+            models.Index(fields=['business', 'group']),
+        ]
+
     def save(self, *args, **kwargs):
         if not self.pk or not self.classification:
             self.classification = self.group.classification
@@ -144,6 +150,12 @@ class Voucher(models.Model):
     
     class Meta:
         unique_together = ('business', 'voucher_type', 'voucher_number', 'financial_year')
+        indexes = [
+            models.Index(fields=['business', 'date']),
+            models.Index(fields=['business', 'voucher_type']),
+            models.Index(fields=['business', 'is_draft']),
+            models.Index(fields=['date']),
+        ]
 
     @property
     def total_amount(self):
@@ -154,16 +166,12 @@ class Voucher(models.Model):
         return f"{self.voucher_type} #{self.voucher_number} | {self.date}"
 
 class JournalEntry(models.Model):
-    """
-    Double Entry line items.
-    Sum of debits must equal sum of credits for a given Voucher.
-    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     voucher = models.ForeignKey(Voucher, on_delete=models.CASCADE, related_name='entries')
-    account = models.ForeignKey(Account, on_delete=models.CASCADE)
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='journal_entries')
     
-    debit = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
-    credit = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
+    debit = models.DecimalField(max_digits=20, decimal_places=2, default=0.00, db_index=True)
+    credit = models.DecimalField(max_digits=20, decimal_places=2, default=0.00, db_index=True)
     
     # Added for Bill Wise Allocation (Tally)
     REF_TYPES = [
@@ -173,7 +181,15 @@ class JournalEntry(models.Model):
         ('ON_ACC', 'On Account'),
     ]
     ref_type = models.CharField(max_length=10, choices=REF_TYPES, blank=True, null=True)
-    ref_number = models.CharField(max_length=100, blank=True, null=True)
+    ref_number = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    
+    class Meta:
+        verbose_name_plural = "Journal Entries"
+        indexes = [
+            models.Index(fields=['account', 'debit', 'credit']),
+            models.Index(fields=['voucher', 'account']),
+            models.Index(fields=['ref_number']),
+        ]
     
     def clean(self):
         if self.debit > 0 and self.credit > 0:
@@ -183,3 +199,82 @@ class JournalEntry(models.Model):
 
     def __str__(self):
         return f"{self.account.name}: {self.debit if self.debit > 0 else self.credit}"
+
+class DayBook(models.Model):
+    """
+    GOD-MODE: Persistent Day Book record.
+    Links transactions directly to documents for strict traceability.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='day_book_entries')
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, null=True, blank=True)
+    voucher = models.OneToOneField(Voucher, on_delete=models.CASCADE, related_name='day_book_entry')
+    date = models.DateField()
+    particulars = models.TextField(help_text="Flattened summary like 'Dr Bank To Sales'")
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"DayBook | {self.date} | {self.amount}"
+
+class TrialBalanceSnapshot(models.Model):
+    """
+    Captures the state of the Trial Balance at a specific point in time (usually after doc processing).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, null=True, blank=True)
+    date = models.DateField()
+    total_debit = models.DecimalField(max_digits=20, decimal_places=2)
+    total_credit = models.DecimalField(max_digits=20, decimal_places=2)
+    is_balanced = models.BooleanField(default=True)
+    data_snapshot = models.JSONField(help_text="JSON dump of account balances")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class ProfitAndLossSnapshot(models.Model):
+    """
+    Captures the P&L state.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, null=True, blank=True)
+    period_start = models.DateField()
+    period_end = models.DateField()
+    net_profit = models.DecimalField(max_digits=20, decimal_places=2)
+    income_json = models.JSONField()
+    expense_json = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class AmortizationSchedule(models.Model):
+    """
+    ASC 606 & Matching Principle Engine.
+    Spreads a single payment over multiple periods.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='amortization_schedules')
+    voucher = models.OneToOneField(Voucher, on_delete=models.CASCADE, related_name='amortization_schedule')
+    asset_account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='prepaid_schedules', help_text="e.g. Prepaid Insurance")
+    expense_account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='expense_schedules', help_text="e.g. Insurance Expense")
+    
+    total_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    periods = models.PositiveIntegerField(help_text="Number of months")
+    
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Amortization: {self.expense_account.name} ({self.periods} months)"
+
+
+class AmortizationMovement(models.Model):
+    """
+    Tracks each monthly journal entry created by the engine.
+    """
+    schedule = models.ForeignKey(AmortizationSchedule, on_delete=models.CASCADE, related_name='movements')
+    journal_voucher = models.OneToOneField(Voucher, on_delete=models.SET_NULL, null=True, blank=True)
+    date = models.DateField()
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    is_posted = models.BooleanField(default=False)

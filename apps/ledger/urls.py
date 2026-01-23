@@ -19,4 +19,12 @@ urlpatterns = [
     path('create-account-reclassify/', views.create_account_and_reclassify, name='create-account-reclassify'),
     path('reports/<int:biz_pk>/capital-infusion/', views.record_capital_infusion, name='capital-infusion'),
     path('reports/<int:biz_pk>/reconcile/', views.reconcile_ledgers, name='reconcile-ledgers'),
+    path('reports/<int:biz_pk>/cleanup/', views.run_cleanup_protocol, name='run-cleanup'),
+    path('reports/<int:biz_pk>/purge/', views.purge_business_data, name='purge-data'),
+    
+    # Forensic & God-Mode Dashboards
+    path('reports/<int:biz_pk>/forensic/', views.forensic_dashboard_view, name='forensic-dashboard'),
+    path('reports/<int:biz_pk>/amortization/', views.amortization_tracker_view, name='amortization-tracker'),
+    path('reports/<int:biz_pk>/intercompany/', views.intercompany_control_tower_view, name='intercompany-tower'),
+    path('reports/<int:biz_pk>/security-audit/', views.security_performance_audit_view, name='security-audit'),
 ]

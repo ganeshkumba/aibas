@@ -51,6 +51,8 @@ class CFOService:
             'is_profitable': net_pl > 0,
             'itc_count': Account.objects.filter(business=business, group__name='Duties & Taxes', name__icontains='Input').count(),
             'expense_count': Account.objects.filter(business=business, group__classification='EXPENSE').count(),
+            'forensic_warnings': business.documents.filter(is_suspicious=True).count(),
+            'active_amortizations': business.amortization_schedules.filter(is_active=True).count(),
             'health_checks': LedgerService.get_accounting_health_checks(business)
         }
 
@@ -67,3 +69,52 @@ class CFOService:
             'health_score': max(0, 100 - (len(health) * 10)),
             'issues': health
         }
+
+    @staticmethod
+    def get_statutory_calendar(business):
+        """
+        GOD-MODE: Calculates upcoming Indian statutory deadlines.
+        Includes GST (20th), TDS (7th), and MSME (45 days from bill date).
+        """
+        import datetime
+        from core.models import Document
+        from django.db.models import Q
+        
+        today = datetime.date.today()
+        deadlines = []
+
+        # 1. GST GSTR-3B (Typically 20th of next month)
+        next_month = (today.replace(day=28) + datetime.timedelta(days=4)).replace(day=20)
+        deadlines.append({
+            'title': 'GST GSTR-3B Filing',
+            'date': next_month,
+            'type': 'GST',
+            'description': 'Monthly summary return and tax payment.'
+        })
+
+        # 2. TDS Payment (7th of next month)
+        next_tds = (today.replace(day=28) + datetime.timedelta(days=4)).replace(day=7)
+        deadlines.append({
+            'title': 'TDS Payment',
+            'date': next_tds,
+            'type': 'TDS',
+            'description': 'Deposit tax deducted at source for the previous month.'
+        })
+
+        # 3. MSME Deadlines (Section 43B(h))
+        # Find unpaid MSME bills with upcoming 45-day deadlines
+        msme_bills = Document.objects.filter(
+            business=business,
+            is_msme=True,
+            payment_deadline__gte=today
+        ).order_by('payment_deadline')[:5]
+
+        for bill in msme_bills:
+            deadlines.append({
+                'title': f'MSME Payment: {bill.document_number}',
+                'date': bill.payment_deadline,
+                'type': 'MSME',
+                'description': f'Mandatory 45-day payment deadline for {bill.lines.first().vendor if bill.lines.exists() else "Vendor"}.'
+            })
+
+        return sorted(deadlines, key=lambda x: x['date'])

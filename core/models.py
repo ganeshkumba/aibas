@@ -63,6 +63,10 @@ class Business(models.Model):
         help_text="Actual business owner / client"
     )
 
+    # --- Multi-Entity Hierarchy ---
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subsidiaries')
+    is_intercompany_enabled = models.BooleanField(default=False)
+
     # Added for Tally & Tax logic
     state = models.CharField(max_length=100, blank=True, null=True, help_text="Company's registered state (for GST POS logic)")
     address = models.TextField(blank=True, null=True)
@@ -178,10 +182,21 @@ class Document(models.Model):
     is_b2b = models.BooleanField(default=False, help_text="True if Business's GSTIN is present on the bill")
     accounting_logic = models.TextField(blank=True, null=True, help_text="AI's Chain-of-thought logic for audit trails")
 
+    # --- Forensic Shield: Technical Auditing (GOD-MODE) ---
+    upload_ip = models.GenericIPAddressField(null=True, blank=True, help_text="Detects 'Internal IP' fraud (ERR-404)")
+    user_agent = models.TextField(null=True, blank=True, help_text="Detects hardware fingerprint consistency (ERR-396)")
+    file_metadata = models.JSONField(default=dict, blank=True, help_text="Stores PDF Author/Producer to catch collusion (ERR-351)")
+    vendor_domain_age = models.IntegerField(null=True, blank=True, help_text="Flags recently registered domains (ERR-253)")
+    is_trusted_vendor = models.BooleanField(default=True)
+    is_suspicious = models.BooleanField(default=False, db_index=True, help_text="Master flag for Forensic Dashboard")
+    suspicion_reason = models.TextField(blank=True, null=True)
+
     class Meta:
         ordering = ['-uploaded_at']
         indexes = [
-            models.Index(fields=['business']),
+            models.Index(fields=['business', 'uploaded_at']),
+            models.Index(fields=['business', 'is_suspicious']),
+            models.Index(fields=['business', 'status']),
             models.Index(fields=['uploaded_by']),
             models.Index(fields=['doc_type']),
             models.Index(fields=['document_number']),

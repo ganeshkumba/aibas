@@ -1,0 +1,86 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<style>
+  .inventory-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+  .stock-alert { border-left: 4px solid #f43f5e !important; }
+</style>
+
+<div class="cfo-header" style="background: linear-gradient(135deg, #064e3b, #022c22); border-color: #065f46;">
+  <div>
+    <h1 style="margin: 0; font-weight: 800;">Virtual Warehouse & AI Stock Auditor</h1>
+    <div style="margin-top: 0.5rem; color: #a7f3d0; font-size: 0.9rem;">
+      Real-time inventory levels derived from AI purchase extraction
+    </div>
+  </div>
+  <div style="display: flex; gap: 1rem;">
+     <div class="stat-card" style="padding: 0.75rem 1.5rem; background: rgba(0,0,0,0.2);">
+        <div class="stat-label" style="color: #a7f3d0;">Stock Value</div>
+        <div class="stat-value" style="font-size: 1.25rem;">₹{{ stats.total_value | floatformat:2 }}</div>
+     </div>
+  </div>
+</div>
+
+<div class="inventory-grid">
+  <div class="entity-registry">
+    <div class="registry-header">
+      <h3 style="margin:0;">Product Catalog</h3>
+      <span class="badge badge-gold">{{ stats.item_count }} Items Tracked</span>
+    </div>
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th>Product Name</th>
+          <th>SKU / HSN</th>
+          <th>Current Stock</th>
+          <th>Value</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for product in products %}
+        <tr class="{% if product.current_stock <= product.low_stock_threshold %}stock-alert{% endif %}">
+          <td style="font-weight: 700;">{{ product.name }}</td>
+          <td style="font-family: 'JetBrains Mono'; font-size: 0.8rem;">{{ product.sku|default:"-" }}</td>
+          <td style="font-weight: 800; font-family: 'JetBrains Mono';">
+            {{ product.current_stock }} {{ product.uom }}
+          </td>
+          <td>₹{{ product.default_purchase_price }}</td>
+          <td>
+            {% if product.current_stock <= product.low_stock_threshold %}
+              <span style="color: #f43f5e; font-weight: 700;">LOW STOCK</span>
+            {% else %}
+              <span style="color: #10b981;">HEALTHY</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 3rem;">No products found. Upload a purchase invoice to start tracking.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="entity-registry">
+     <div class="registry-header">
+        <h3 style="margin:0;">Recent Movements</h3>
+     </div>
+     <div style="padding: 1rem;">
+        {% for move in movements %}
+        <div style="padding: 0.75rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-weight: 700; font-size: 0.85rem;">{{ move.product.name }}</div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary);">{{ move.date }} | {{ move.get_type_display }}</div>
+            </div>
+            <div style="font-family: 'JetBrains Mono'; font-weight: 800; color: {% if move.type == 'IN' %}#10b981{% else %}#f43f5e{% endif %};">
+                {% if move.type == 'IN' %}+{% else %}-{% endif %}{{ move.quantity }}
+            </div>
+        </div>
+        {% empty %}
+        <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">No movements yet.</div>
+        {% endfor %}
+     </div>
+  </div>
+</div>
+{% endblock %}

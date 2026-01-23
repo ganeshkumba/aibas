@@ -1,0 +1,164 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<style>
+    .tower-header {
+        background: linear-gradient(135deg, #1a2a4b 0%, #3b5998 100%);
+        color: white;
+        padding: 3rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 5px solid #c5a059;
+    }
+
+    .entity-map {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+        margin: 3rem 0;
+    }
+
+    .entity-node {
+        background: var(--card-background);
+        border: 2px solid var(--border-classic);
+        padding: 1.5rem 3rem;
+        border-radius: 50px;
+        text-align: center;
+        min-width: 250px;
+        position: relative;
+        box-shadow: var(--card-shadow);
+    }
+
+    .entity-node.parent {
+        border-color: #c5a059;
+        background: #fffdf9;
+    }
+
+    .entity-node.active {
+        border-color: var(--fb-blue);
+        box-shadow: 0 0 20px rgba(59, 89, 152, 0.2);
+    }
+
+    .connector {
+        width: 2px;
+        height: 50px;
+        background: var(--border-classic);
+        position: relative;
+    }
+
+    .connector::after {
+        content: "↕️";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--fb-bg);
+        padding: 4px;
+        font-size: 0.8rem;
+    }
+
+    .inter-transaction-card {
+        border-left: 4px solid #c5a059;
+        padding-left: 1.5rem;
+    }
+</style>
+
+<div class="tower-header">
+    <div>
+        <h1 style="color: white; margin: 0;">Group Control Tower</h1>
+        <div style="opacity: 0.9; font-weight: 600; font-size: 0.9rem;">Multi-Entity Symmetry & Intercompany Reconciliation</div>
+    </div>
+    <div style="text-align: right;">
+        <span class="tag" style="background: #c5a059; color: white;">Consolidated View</span>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="text-align: center; margin-bottom: 2rem;">Organizational Hierarchy</h3>
+    <div class="entity-map">
+        {% if parent %}
+            <div class="entity-node parent">
+                <div class="small" style="color: #c5a059; font-weight: 900;">PARENT ENTITY</div>
+                <div style="font-weight: 700; font-size: 1.2rem;">{{ parent.name }}</div>
+            </div>
+            <div class="connector"></div>
+        {% endif %}
+
+        <div class="entity-node active">
+            <div class="small" style="color: var(--fb-blue); font-weight: 900;">CURRENT HUB</div>
+            <div style="font-weight: 700; font-size: 1.2rem;">{{ business.name }}</div>
+        </div>
+
+        {% if subsidiaries %}
+            <div class="connector"></div>
+            <div style="display: flex; gap: 2rem;">
+                {% for sub in subsidiaries %}
+                    <div class="entity-node">
+                        <div class="small" style="color: var(--text-secondary); font-weight: 900;">SUBSIDIARY</div>
+                        <div style="font-weight: 700;">{{ sub.name }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card inter-transaction-card">
+    <h3>Related Party Transactions</h3>
+    <p class="small" style="margin-bottom: 2rem;">These transactions were detected as involving other entities within your group. Ensure symmetric recording in both ledgers.</p>
+
+    {% if intercompany_docs %}
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="text-align: left; font-size: 0.75rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-classic);">
+                    <th style="padding: 1rem;">Document</th>
+                    <th style="padding: 1rem;">Counterparty</th>
+                    <th style="padding: 1rem;">Logic Detected</th>
+                    <th style="padding: 1rem;">Integrity Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in intercompany_docs %}
+                    <tr style="border-bottom: 1px solid rgba(128,128,128,0.05);">
+                        <td style="padding: 1rem;">
+                            <div style="font-weight: 700;">#{{ doc.id | stringformat:".8s" }}</div>
+                            <div class="small">{{ doc.uploaded_at | date:"d M Y" }}</div>
+                        </td>
+                        <td style="padding: 1rem; font-weight: 700;">
+                            {% if doc.lines.all.0.vendor %}
+                                {{ doc.lines.all.0.vendor }}
+                            {% else %}
+                                Internal Party
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            <div class="small" style="color: #c5a059; font-weight: 700;">{{ doc.accounting_logic }}</div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <span class="tag tag-success">Symmetric</span>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+            <div class="small">No intercompany transactions flagged in the current period.</div>
+        </div>
+    {% endif %}
+</div>
+
+<div class="card" style="border-top: 1px solid #c5a059; background: #fffdf9;">
+    <h4 style="color: #c5a059; margin-bottom: 1rem;">Audit Observation (ERR-252/260)</h4>
+    <p class="small">
+        Multi-entity consolidation requires elimination of intercompany balances. 
+        The "Group Sync" feature ensures that a Payable in <strong>{{ business.name }}</strong> 
+        is automatically matched by a Receivable in the related party entity.
+    </p>
+</div>
+
+{% endblock %}

@@ -3,8 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from apps.common.views.base import ApiView
-from .models import Voucher, Account, AccountGroup, FinancialYear, JournalEntry, VoucherType
-from core.models import Business
+from core.models import Business, Document
+from .models import Voucher, Account, AccountGroup, FinancialYear, JournalEntry, VoucherType, AmortizationSchedule, AmortizationMovement
+
 from .services.ledger_service import LedgerService
 from decimal import Decimal
 from django.db import models
@@ -31,22 +32,46 @@ def reconcile_ledgers(request, biz_pk):
     return redirect('ledger:trial-balance', biz_pk=biz_pk)
 
 @login_required
+@require_POST
+def run_cleanup_protocol(request, biz_pk):
+    """
+    Triggers the Universal Corrections Protocol (Section 7)
+    """
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    
+    corrections = LedgerService.smart_cleanup(business)
+    
+    if corrections:
+        count = len(corrections)
+        messages.success(request, f"Universal Corrections Protocol Finished: Applied {count} fixes to your ledger.")
+        for msg in corrections[:5]: # Show first 5 detailed fixes
+             messages.info(request, f"Fix: {msg}")
+    else:
+        messages.info(request, "Cleanup Complete: No inconsistencies found. Your ledger is GAAP compliant.")
+        
+    return redirect('ledger:trial-balance', biz_pk=biz_pk)
+
+@login_required
 def day_book_view(request, biz_pk):
     if request.user.is_superuser:
         business = get_object_or_404(Business, pk=biz_pk)
     else:
         business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
     
-    # Chronological is usually ascending for a Day Book
-    vouchers = Voucher.objects.filter(business=business).order_by('date', 'created_at').prefetch_related('entries__account')
+    # Use the persistent DayBook model
+    from .models import DayBook
+    entries = DayBook.objects.filter(business=business).select_related('voucher', 'document').order_by('date', 'created_at')
     
-    # Calculate totals
-    total_dr = JournalEntry.objects.filter(voucher__business=business).aggregate(Sum('debit'))['debit__sum'] or 0
-    total_cr = JournalEntry.objects.filter(voucher__business=business).aggregate(Sum('credit'))['credit__sum'] or 0
+    # Still calculate totals from live vouchers for the footer
+    total_dr = JournalEntry.objects.filter(voucher__business=business, voucher__is_draft=False).aggregate(Sum('debit'))['debit__sum'] or 0
+    total_cr = JournalEntry.objects.filter(voucher__business=business, voucher__is_draft=False).aggregate(Sum('credit'))['credit__sum'] or 0
     
     return render(request, 'ledger/daybook.html', {
         'business': business, 
-        'vouchers': vouchers,
+        'entries': entries,
         'total_dr': total_dr,
         'total_cr': total_cr
     })
@@ -94,13 +119,18 @@ def trial_balance_view(request, biz_pk):
             total_cr += cr
             
     health_checks = LedgerService.get_accounting_health_checks(business)
+    
+    # Snapshot History
+    from .models import TrialBalanceSnapshot
+    snapshots = TrialBalanceSnapshot.objects.filter(business=business).order_by('-created_at')[:5]
             
     return render(request, 'ledger/trial_balance.html', {
         'business': business, 
         'report_data': report_data,
         'total_dr': total_dr,
         'total_cr': total_cr,
-        'health_checks': health_checks
+        'health_checks': health_checks,
+        'snapshots': snapshots
     })
 
 @login_required
@@ -110,39 +140,23 @@ def profit_loss_view(request, biz_pk):
     else:
         business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
     
-    # Professional Aggregation: Single pass for all P&L movements
-    pnl_vouchers = [VoucherType.SALES, VoucherType.PURCHASE, VoucherType.JOURNAL, VoucherType.CREDIT_NOTE, VoucherType.DEBIT_NOTE]
+    # Pull from the latest persistent snapshot if it exists
+    from .models import ProfitAndLossSnapshot
+    latest_snap = ProfitAndLossSnapshot.objects.filter(business=business).order_by('-created_at').first()
     
-    balances = JournalEntry.objects.filter(
-        voucher__business=business,
-        voucher__voucher_type__in=pnl_vouchers,
-        voucher__is_draft=False,
-        account__group__classification__in=['INCOME', 'EXPENSE']
-    ).values('account_id').annotate(dr=Sum('debit'), cr=Sum('credit'))
-    
-    bal_map = {b['account_id']: (b['dr'] or Decimal('0')) - (b['cr'] or Decimal('0')) for b in balances}
-
-    # 1. Income
-    income_accounts = Account.objects.filter(business=business, group__classification='INCOME')
-    income_data = []
-    total_income = Decimal('0')
-    for acc in income_accounts:
-        bal = -bal_map.get(acc.id, Decimal('0'))
-        if bal != 0:
-            income_data.append({'name': acc.name, 'amount': bal})
-            total_income += bal
-            
-    # 2. Expenses
-    expense_accounts = Account.objects.filter(business=business, group__classification='EXPENSE')
-    expense_data = []
-    total_expense = Decimal('0')
-    for acc in expense_accounts:
-        bal = bal_map.get(acc.id, Decimal('0'))
-        if bal != 0:
-            expense_data.append({'name': acc.name, 'amount': bal})
-            total_expense += bal
-            
-    net_profit = total_income - total_expense
+    if latest_snap:
+        income_data = latest_snap.income_json.get('entries', [])
+        expense_data = latest_snap.expense_json.get('entries', [])
+        total_income = Decimal(str(latest_snap.income_json.get('total', 0)))
+        total_expense = Decimal(str(latest_snap.expense_json.get('total', 0)))
+        net_profit = latest_snap.net_profit
+    else:
+        # Fallback to dynamic (or show empty)
+        income_data = []
+        expense_data = []
+        total_income = Decimal('0')
+        total_expense = Decimal('0')
+        net_profit = Decimal('0')
     
     return render(request, 'ledger/profit_loss.html', {
         'business': business,
@@ -150,7 +164,8 @@ def profit_loss_view(request, biz_pk):
         'expense_data': expense_data,
         'total_income': total_income,
         'total_expense': total_expense,
-        'net_profit': net_profit
+        'net_profit': net_profit,
+        'snapshot': latest_snap
     })
 
 @login_required
@@ -313,17 +328,53 @@ class TallyExportView(ApiView):
 def reclassify_entry(request):
     entry_id = request.POST.get('entry_id')
     new_account_id = request.POST.get('account_id')
+    to_account_id = request.POST.get('to_account_id') # Balancing Account
     
-    if request.user.is_superuser:
-        entry = get_object_or_404(JournalEntry, id=entry_id)
-    else:
-        entry = get_object_or_404(JournalEntry, id=entry_id, voucher__business__created_by=request.user)
+    if not entry_id or not new_account_id:
+        messages.error(request, "Missing entry ID or account ID.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    try:
+        if request.user.is_superuser:
+            entry = JournalEntry.objects.get(id=entry_id)
+        else:
+            entry = JournalEntry.objects.get(id=entry_id, voucher__business__created_by=request.user)
+    except JournalEntry.DoesNotExist:
+        messages.error(request, f"Journal Entry {entry_id} not found or access denied.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
         
-    new_acc = get_object_or_404(Account, id=new_account_id, business=entry.voucher.business)
+    try:
+        new_acc = Account.objects.get(id=new_account_id, business=entry.voucher.business)
+    except Account.DoesNotExist:
+        messages.error(request, f"Account {new_account_id} not found for this business.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
     
+    # 1. Update the primary entry
     entry.account = new_acc
     entry.save()
+
+    # 2. Update the balancing entry if requested (The "To" Constraint)
+    voucher = entry.voucher
+    if to_account_id:
+        try:
+            to_acc = Account.objects.get(id=to_account_id, business=voucher.business)
+            # Find the other side of the entry
+            other_entry = voucher.entries.exclude(id=entry.id).first()
+            if other_entry:
+                other_entry.account = to_acc
+                other_entry.save()
+        except Account.DoesNotExist:
+            pass
+
+    # 3. Synchronize narration with the new "To" constraint
+    dr_acc = voucher.entries.filter(debit__gt=0).first()
+    cr_acc = voucher.entries.filter(credit__gt=0).first()
+    if dr_acc and cr_acc:
+        v_type_label = voucher.voucher_type.title()
+        voucher.narration = f"{v_type_label}: Dr {dr_acc.account.name} To {cr_acc.account.name} | Ref: {voucher.voucher_number}"
+        voucher.save()
     
+    messages.success(request, f"Successfully reclassified entry to {new_acc.name}")
     return redirect(request.META.get('HTTP_REFERER', '/'))
 
 
@@ -336,6 +387,7 @@ def create_account_and_reclassify(request):
     entry_id = request.POST.get('entry_id')
     account_name = request.POST.get('name')
     group_id = request.POST.get('group_id')
+    to_account_id = request.POST.get('to_account_id')
 
     if request.user.is_superuser:
         entry = get_object_or_404(JournalEntry, id=entry_id)
@@ -345,19 +397,44 @@ def create_account_and_reclassify(request):
     business = entry.voucher.business
     group = get_object_or_404(AccountGroup, id=group_id, business=business)
 
-    # Create the new account
-    new_acc = Account.objects.create(
+    # 1. Create the new account with automated normalization
+    from .services.automation_service import AutomationService
+    normalized_name = AutomationService.normalize_ledger_name(account_name)
+    
+    new_acc, created = Account.objects.get_or_create(
         business=business,
-        group=group,
-        name=account_name,
-        classification=group.classification
+        name=normalized_name,
+        defaults={
+            'group': group,
+            'classification': group.classification
+        }
     )
 
-    # Reclassify the entry
+    # 2. Reclassify the entry
     entry.account = new_acc
     entry.save()
 
-    messages.success(request, f"Created new ledger '{account_name}' and reclassified entry.")
+    # 3. Handle Balancing Account (To-Constraint)
+    voucher = entry.voucher
+    if to_account_id:
+        try:
+            to_acc = Account.objects.get(id=to_account_id, business=business)
+            other_entry = voucher.entries.exclude(id=entry.id).first()
+            if other_entry:
+                other_entry.account = to_acc
+                other_entry.save()
+        except Account.DoesNotExist:
+            pass
+
+    # 4. Synchronize Narration
+    dr_acc = voucher.entries.filter(debit__gt=0).first()
+    cr_acc = voucher.entries.filter(credit__gt=0).first()
+    if dr_acc and cr_acc:
+        v_type_label = voucher.voucher_type.title()
+        voucher.narration = f"{v_type_label}: Dr {dr_acc.account.name} To {cr_acc.account.name} | Ref: {voucher.voucher_number}"
+        voucher.save()
+
+    messages.success(request, f"Created new ledger '{new_acc.name}' and reclassified entry.")
     return redirect(request.META.get('HTTP_REFERER', '/'))
 @login_required
 @require_POST
@@ -407,3 +484,133 @@ def record_capital_infusion(request, biz_pk):
         messages.error(request, f"Failed to record infusion: {e}")
 
     return redirect('ledger:trial-balance', biz_pk=biz_pk)
+
+@login_required
+@require_POST
+def purge_business_data(request, biz_pk):
+    """
+    SECTION 8: The Nuclear Option.
+    Wipes all accounting records while keeping the Business profile intact.
+    Used for clearing systemic errors or starting fresh.
+    """
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    
+    with transaction.atomic():
+        # 1. This cascades to most things (DayBook, Snapshots, Entries, Movements)
+        business.documents.all().delete()
+        
+        # 2. Cleanup Manual Vouchers (Opening Capital, etc.)
+        Voucher.objects.filter(business=business).delete()
+        
+        # 3. Cleanup Inventory Movements (even manual ones)
+        from apps.inventory.models import StockMovement
+        StockMovement.objects.filter(product__business=business).delete()
+        
+        # 4. Optional: Reset Voucher Series
+        from .models import VoucherSeries
+        VoucherSeries.objects.filter(business=business).update(current_number=1)
+
+    messages.success(request, f"Nuclear Purge Complete: All records for {business.name} have been annihilated. Clean slate initialized.")
+    return redirect('core:business_detail', pk=biz_pk)
+
+@login_required
+def forensic_dashboard_view(request, biz_pk):
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    
+    suspicious_docs = Document.objects.filter(business=business, is_suspicious=True).order_by('-uploaded_at')
+    
+    # Simple IP Analysis
+    from django.db.models import Count
+    ip_stats = Document.objects.filter(business=business).values('upload_ip').annotate(count=Count('id')).order_by('-count')
+    
+    return render(request, 'ledger/forensic_dashboard.html', {
+        'business': business,
+        'suspicious_docs': suspicious_docs,
+        'ip_stats': ip_stats
+    })
+
+@login_required
+def amortization_tracker_view(request, biz_pk):
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    
+    schedules = AmortizationSchedule.objects.filter(business=business).prefetch_related('movements')
+    
+    active_schedules = schedules.filter(is_active=True)
+    completed_schedules = schedules.filter(is_active=False)
+    
+    # Calculate totals
+    total_prepaid = schedules.filter(is_active=True).aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    return render(request, 'ledger/amortization_tracker.html', {
+        'business': business,
+        'active_schedules': active_schedules,
+        'completed_schedules': completed_schedules,
+        'total_prepaid': total_prepaid
+    })
+
+@login_required
+def intercompany_control_tower_view(request, biz_pk):
+    if request.user.is_superuser:
+        business = get_object_or_404(Business, pk=biz_pk)
+    else:
+        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+    
+    subsidiaries = Business.objects.filter(parent=business)
+    parent = business.parent
+    
+    # Find transactions flagged for intercompany
+    intercompany_docs = Document.objects.filter(business=business, accounting_logic__contains='INTERCOMPANY')
+    
+    return render(request, 'ledger/intercompany_control.html', {
+        'business': business,
+        'subsidiaries': subsidiaries,
+        'parent': parent,
+        'intercompany_docs': intercompany_docs
+    })
+
+@login_required
+def security_performance_audit_view(request, biz_pk):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+        
+    business = get_object_or_404(Business, pk=biz_pk)
+    
+    # Audit Log Chain Integrity Check
+    from apps.audit.models import AuditLog
+    logs = AuditLog.objects.order_by('timestamp')
+    integrity_issues = []
+    
+    # We'll just check the last 100 for performance
+    prev_hash = None
+    for log in logs[:100]:
+        if prev_hash and log.previous_hash != prev_hash:
+            integrity_issues.append(f"Chain Break detected at Log ID: {log.id}")
+        prev_hash = log.entry_hash
+
+    # Performance Hotspots
+    # 1. Accounts with excessive transactions
+    db_hotspots = Account.objects.filter(business=business).annotate(entry_count=Count('journal_entries')).order_by('-entry_count')[:5]
+    
+    # 2. Slow Reports Simulation (Metadata)
+    import time
+    start = time.time()
+    # Dummy aggregation to measure DB speed
+    JournalEntry.objects.filter(voucher__business=business).aggregate(Sum('debit'))
+    db_latency = (time.time() - start) * 1000 # ms
+
+    return render(request, 'ledger/security_performance_report.html', {
+        'business': business,
+        'integrity_issues': integrity_issues,
+        'db_hotspots': db_hotspots,
+        'db_latency': db_latency,
+        'log_count': logs.count()
+    })

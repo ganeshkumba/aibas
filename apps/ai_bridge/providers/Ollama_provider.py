@@ -10,9 +10,12 @@ class OllamaProvider(BaseAIProvider):
         self.model = model or getattr(settings, 'OLLAMA_MODEL', "llama3.1")
         self.url = getattr(settings, 'OLLAMA_URL', "http://localhost:11434/api/generate")
 
-    def extract(self, text: str, doc_type: str = 'receipt') -> dict:
+    def extract(self, text: str, doc_type: str = 'receipt', context: dict = None) -> dict:
         # Truncate text to avoid choking CPU-based Ollama instances
         safe_text = (text or "")[:6000]
+        context = context or {}
+        biz_gstin = context.get('business_gstin', 'UNKNOWN')
+        state_code = biz_gstin[:2] if biz_gstin != 'UNKNOWN' else 'XX'
         
         if doc_type == 'bank':
             prompt = f"""
@@ -32,7 +35,8 @@ FORMAT: Return ONLY a valid JSON object.
       "credit": 0.0,
       "balance": 0.0
     }}
-  ]
+  ],
+  "accounting_logic": "Note any missing balances or unusual entries"
 }}
 
 RULES:
@@ -47,33 +51,39 @@ DOCUMENT TEXT:
             prompt = f"""
 SYSTEM: You are an Expert Indian CA and Tax Consultant.
 TASK: Extract structured data for Tally-compliant accounting.
+MY BUSINESS GSTIN: {biz_gstin}
 
 {{
-  "vendor": "...",
+  "vendor": "Clean Name (No 'M/s', No Addresses)",
   "vendor_gstin": "...",
-  "place_of_supply": "...",
+  "place_of_supply": "State Name",
   "invoice_no": "...",
   "date": "YYYY-MM-DD",
   "total_amount": 0.0,
   "tax_amount": 0.0,
+  "gst_type": "CGST_SGST or IGST or EXEMPT",
   "line_items": [
     {{
       "description": "...",
       "hsn_code": "...",
       "amount": 0.0,
       "tax_rate": "18%",
-      "ledger_suggestion": "e.g. Office Rent, Software Expense, Sales Income"
+      "ledger_suggestion": "e.g. Office Rent, Software Expense, Fixed Assets"
     }}
   ],
-  "confidence": 0-100
+  "confidence": 0-100,
+  "is_msme": false,
+  "udyam_number": "...",
+  "is_b2b": false,
+  "accounting_logic": "Explain tax and ledger selection reasoning"
 }}
 
 RULES:
-1. 'amount' in line_items must be the TOTAL (Inclusive of GST) for that line.
-2. Ensure ledger_suggestion follows the rule: 
-   - Use 'Expense' or 'Asset' suffix if it's a Purchase/Bill.
-   - Use 'Income' suffix if it's a Sale/Invoice you issued.
-3. If GST is not mentioned, tax_amount is 0.0 and tax_rate is "0%".
+1. is_b2b: Set to TRUE only if MY GSTIN ({biz_gstin}) is found in the 'Bill To' or 'Buyer' section.
+2. gst_type: If Vendor GSTIN starts with {state_code}, use 'CGST_SGST'. Otherwise 'IGST'.
+3. is_msme: Look for 'MSME' text or 'Udyam' numbers.
+4. amount: Total for the line (Taxable + Tax).
+5. LEDGER RULE: If item > 10,000 and durable (Laptop, Phone), suggest 'Fixed Assets'. Otherwise use 'Indirect Expenses'.
 
 DOCUMENT TEXT:
 {safe_text}

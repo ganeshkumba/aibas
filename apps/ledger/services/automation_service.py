@@ -1,10 +1,12 @@
 import datetime
 import logging
 from decimal import Decimal
-from django.db import transaction
+from django.db import transaction, models
 from apps.ledger.models import Voucher, JournalEntry, Account, FinancialYear, VoucherType, AccountGroup
 from apps.ledger.services.ledger_service import LedgerService
-from core.models import Document, ExtractedLineItem
+from core.models import Document, ExtractedLineItem, Business
+from apps.inventory.services.inventory_service import InventoryAutomationService
+
 
 logger = logging.getLogger(__name__)
 
@@ -21,32 +23,110 @@ class AutomationService:
     }
 
     @staticmethod
-    def get_or_create_default_account(business, name, group_name, voucher_type=None):
+    def normalize_ledger_name(name):
         """
-        Smart Ledger Mapper with Rule 1 Enforcement.
+        SECTION 2.1: Naming Conventions Standardization
+        Ensures Proper Case, removes extra spaces, and standardizes terminology.
+        Includes "Self-Healing" for common typos.
         """
+        if not name:
+            return "General Ledger"
+        
+        # 0. Common Typo Correction Map (Mistake 1.1 / 2.1)
+        typo_map = {
+            'COOUD': 'CLOUD',
+            'SHIPING': 'SHIPPING',
+            'COURIER / SHIPPING': 'COURIER/SHIPPING',
+            'OFFICE SUPPLIE': 'OFFICE SUPPLIES',
+            'STATIONARY': 'STATIONERY',
+            'CONSLTING': 'CONSULTING',
+            'ADVERTISMENT': 'ADVERTISEMENT',
+            'SUBSCRIPTON': 'SUBSCRIPTION',
+            'RECIEPT': 'RECEIPT'
+        }
+        
+        # Clean extra spaces and convert to upper for map check
+        clean_name = " ".join(name.split()).upper()
+        
+        # Apply typo corrections (Partial or Full)
+        for typo, correct in typo_map.items():
+            if typo in clean_name:
+                clean_name = clean_name.replace(typo, correct)
+        
+        # 1. Standardize separators (e.g. " / " -> "/")
+        clean_name = clean_name.replace(" / ", "/").replace(" - ", "-")
+        
+        # 2. Handle Proper Case but keep acronyms uppercase
+        uppercases = ['GST', 'TDS', 'AWS', 'UTR', 'IGST', 'CGST', 'SGST', 'ITC', 'PAN', 'MSME', 'HDFC', 'ICICI', 'SBI']
+        words = clean_name.split()
+        normalized_words = []
+        for word in words:
+            # Strip common punctuation for keyword check, but keep it in the name
+            punc_prefix = ""
+            punc_suffix = ""
+            while word and word[0] in '()[]/.-':
+                punc_prefix += word[0]
+                word = word[1:]
+            while word and word[-1] in '()[]/.-':
+                punc_suffix += word[-1]
+                word = word[:-1]
+                
+            clean_word = word.upper()
+            if clean_word in uppercases:
+                normalized_words.append(f"{punc_prefix}{word.upper()}{punc_suffix}")
+            else:
+                normalized_words.append(f"{punc_prefix}{word.capitalize()}{punc_suffix}")
+        
+        normalized_name = " ".join(normalized_words)
+        
+        # Consistency Check: Append 'Expense' if missing from common indirect accounts (Mistake 2.2)
+        if any(k in normalized_name.upper() for k in ['OFFICE SUPPLIES', 'SOFTWARE', 'CLOUD SUBSCRIPTION']) and 'EXPENSE' not in normalized_name.upper():
+             normalized_name += " Expense"
+             
+        return normalized_name.strip()
+
+    @staticmethod
+    def get_or_create_default_account(business, name, group_name=None, voucher_type=None):
+        """
+        Automated Ledger Provisioning Engine (SECTION 1 & 2)
+        """
+        name = AutomationService.normalize_ledger_name(name)
+        
+        # 1. Self-Healing Search: If account exists in ANY group, reuse it
+        # This prevents "Same Account in Multiple Groups" (Mistake 2.3)
+        existing = Account.objects.filter(business=business, name__iexact=name).first()
+        if existing:
+            return existing
+
+        # 2. Advanced Group Inference (Mistake 1.1 - 1.5)
+        if not group_name:
+            n_upper = name.upper()
+            if any(k in n_upper for k in ['RENT', 'SALARY', 'WAGES', 'SUPPLIES', 'REPAIR', 'FEES', 'ADVERT', 'CHARGES', 'SUBSCRIPTION']):
+                group_name = "Indirect Expenses"
+            elif any(k in n_upper for k in ['BANK', 'CASH', 'HDFC', 'ICICI', 'PETTY']):
+                group_name = "Bank Accounts"
+            elif any(k in n_upper for k in ['SALES', 'INTEREST INCOME', 'REVENUE']):
+                group_name = "Indirect Incomes"
+            else:
+                group_name = "Indirect Expenses" # Safe default for unknowns
+
         # Rule 1 Check: Ensure the ledger group is valid for this voucher type
         if voucher_type and voucher_type in AutomationService.VOUCHER_ALLOWED_GROUPS:
             allowed = AutomationService.VOUCHER_ALLOWED_GROUPS[voucher_type]
-            # Fuzzy match or exact match on group name
             if not any(a in group_name for a in allowed):
                 logger.warning(f"VOUCHER MISMATCH: Group '{group_name}' not allowed for {voucher_type}. Correcting...")
-                # Automatic Correction Logic
                 if voucher_type == VoucherType.PURCHASE and 'INCOME' in group_name.upper():
                     group_name = 'Indirect Expenses'
                 elif voucher_type == VoucherType.SALES and 'EXPENSE' in group_name.upper():
                     group_name = 'Indirect Incomes'
 
-        existing = Account.objects.filter(business=business, name__iexact=name).first()
-        if existing:
-            return existing
-
         group = AccountGroup.objects.filter(business=business, name=group_name).first()
         if not group:
             classification = 'EXPENSE'
-            if 'Income' in group_name: classification = 'INCOME'
-            elif any(k in group_name for k in ['Asset', 'Bank', 'Cash', 'Debtors']): classification = 'ASSET'
-            elif any(k in group_name for k in ['Liabilities', 'Creditors', 'Taxes', 'Capital']): classification = 'LIABILITY'
+            gn_upper = group_name.upper()
+            if 'INCOME' in gn_upper: classification = 'INCOME'
+            elif any(k in gn_upper for k in ['ASSET', 'BANK', 'CASH', 'DEBTOR']): classification = 'ASSET'
+            elif any(k in gn_upper for k in ['LIABILITY', 'CREDITOR', 'TAXES', 'CAPITAL', 'PAYABLE']): classification = 'LIABILITY'
             
             group, _ = AccountGroup.objects.get_or_create(
                 business=business, 
@@ -105,9 +185,21 @@ class AutomationService:
             logger.info(f"Processing as Invoice for Doc {document.id}")
             vouchers = cls._process_invoice(document, fy, lines)
             
-        # Point: Liability Inflation Fix
         # Always run the reconciliation engine after new docs are added
         cls.reconcile_pending_payments(document.business)
+        
+        # INCREASED FUNCTIONALITY: Update Inventory
+        try:
+            InventoryAutomationService.update_stock_from_document(document)
+        except Exception as e:
+            logger.error(f"Inventory Update Failed: {e}")
+
+        # GOD-MODE: Capture Report Snapshots
+        try:
+            LedgerService.generate_financial_snapshots(document.business, document=document)
+        except Exception as e:
+            logger.error(f"Snapshot Generation Failed: {e}")
+            
         return vouchers
 
     @classmethod
@@ -139,44 +231,78 @@ class AutomationService:
 
             v_type = VoucherType.PAYMENT if is_payment else VoucherType.RECEIPT
             entries_data = []
-            desc_upper = (line.description or "").upper()
-            
+            desc_upper = (line.vendor or "").upper() # Description from bank
+            purpose_upper = (line.description or "").upper() # Purpose/AI summary
+            suggested_acc = (line.ledger_account or "").upper()
+
             # --- START SMART RECONCILIATION ---
             party_account = None
             ref_info = {"type": "ON_ACC", "number": line.invoice_no or "BANK-REF"}
 
-            if is_payment:
-                # Seek Purchase match
+            # 1. Direct detection for Bank Fees/Interest (Mistake 5)
+            if "CHARGE" in desc_upper or "CHARGE" in suggested_acc or "FEES" in desc_upper:
+                party_account = cls.get_or_create_default_account(document.business, "Bank Charges", "Indirect Expenses", voucher_type=v_type)
+            elif "INTEREST" in desc_upper or "INTEREST" in suggested_acc:
+                if not is_payment:
+                    party_account = cls.get_or_create_default_account(document.business, "Interest Income", "Indirect Incomes", voucher_type=v_type)
+                else:
+                    party_account = cls.get_or_create_default_account(document.business, "Interest Expense", "Indirect Expenses", voucher_type=v_type)
+            
+            # 2. Seek exact Bill match (Mistake 4)
+            if not party_account:
+                target_group = 'Sundry Creditors' if is_payment else 'Sundry Debtors'
+                target_v_type = VoucherType.PURCHASE if is_payment else VoucherType.SALES
+                
+                # Look for exact amount match
                 potential_match = JournalEntry.objects.filter(
                     account__business=document.business,
-                    account__group__name__icontains='Creditors',
-                    credit=amount,
-                    voucher__voucher_type=VoucherType.PURCHASE
+                    account__group__name__icontains=target_group.replace('s', ''),
+                    credit=amount if is_payment else 0,
+                    debit=amount if not is_payment else 0,
+                    voucher__voucher_type=target_v_type
                 ).select_related('account', 'voucher').last()
 
-                if potential_match:
+                # Rule B: TDS Detection (Mistake 3)
+                # If no exact match, look for a match where (Amount / 0.9) or (Amount / 0.98) matches an invoice
+                if not potential_match and not is_payment:
+                    for rate in [Decimal('0.10'), Decimal('0.02'), Decimal('0.05')]:
+                        gross_amount = (amount / (1 - rate)).quantize(Decimal('0.01'))
+                        tds_match = JournalEntry.objects.filter(
+                            account__business=document.business,
+                            account__group__name__icontains='Sundry Debtors',
+                            debit=gross_amount,
+                            voucher__voucher_type=VoucherType.SALES
+                        ).select_related('account', 'voucher').last()
+                        
+                        if tds_match:
+                            logger.info(f"TDS RECEIVABLE DETECTED: Receipt {amount} matches gross invoice {gross_amount} (rate {rate*100}%)")
+                            party_account = tds_match.account
+                            ref_info = {"type": "AGST", "number": tds_match.voucher.voucher_number}
+                            
+                            # Add TDS entry
+                            tds_val = gross_amount - amount
+                            tds_rec_acc = cls.get_or_create_default_account(document.business, f"TDS Receivable @ {rate*100}%", "Current Assets")
+                            entries_data.append({'account_id': tds_rec_acc.id, 'debit': tds_val, 'credit': 0})
+                            amount = gross_amount # Adjust receipt amount to gross for balancing the entry
+                            break
+
+                if potential_match and not party_account:
                     party_account = potential_match.account
                     ref_info = {"type": "AGST", "number": potential_match.voucher.voucher_number}
 
-            if not party_account:
-                # 1. Alias Resolution
-                for key, professional_name in master_alias.items():
-                    if key in desc_upper:
-                        party_account = cls.get_or_create_default_account(document.business, professional_name, 'Sundry Creditors', voucher_type=v_type)
-                        break
+            # 3. AI suggested category (Mistake 1)
+            if not party_account and suggested_acc and "PENDING" not in suggested_acc:
+                group = "Indirect Expenses" if is_payment else "Indirect Incomes"
+                if "DEBTOR" in suggested_acc or "SALE" in suggested_acc: group = "Sundry Debtors"
+                elif "CREDITOR" in suggested_acc or "PURCHASE" in suggested_acc: group = "Sundry Creditors"
+                
+                party_account = cls.get_or_create_default_account(document.business, line.ledger_account, group, voucher_type=v_type)
 
+            # 4. Alias / Map Fallbacks
             if not party_account:
-                # 2. Common Vendor Mapping (Fallback)
-                vendor_map = {
-                    'GOOGLE': ('Google Cloud India', 'Sundry Creditors'),
-                    'SWIGGY': ('Bundl Technologies', 'Sundry Creditors'),
-                    'ZOMATO': ('Zomato Limited', 'Sundry Creditors'),
-                    'RENT': ('Office Landlord', 'Sundry Creditors'),
-                    'SALARY': ('Staff Salary Payable', 'Current Liabilities'),
-                }
-                for key, (name, group) in vendor_map.items():
+                for key, prof_name in master_alias.items():
                     if key in desc_upper:
-                        party_account = cls.get_or_create_default_account(document.business, name, group, voucher_type=v_type)
+                        party_account = cls.get_or_create_default_account(document.business, prof_name, 'Sundry Creditors', voucher_type=v_type)
                         break
 
             if not party_account:
@@ -187,26 +313,26 @@ class AutomationService:
                     voucher_type=v_type
                 )
 
-            # --- GAAP GUARDRAIL: Bank/Cash Rule (Rule 2) ---
+            # --- Persistence ---
             if is_payment:
                 # Dr Party, Cr Bank
                 entries_data.append({'account_id': party_account.id, 'debit': amount, 'credit': 0, 'ref_type': ref_info['type'], 'ref_number': ref_info['number']})
                 entries_data.append({'account_id': bank_account.id, 'debit': 0, 'credit': amount})
             else:
-                # Dr Bank, Cr Party
-                entries_data.append({'account_id': bank_account.id, 'debit': amount, 'credit': 0})
+                # Dr Bank, Cr Party (Receipt amount might have been adjusted for TDS above)
+                actual_cash = line.credit # The real cash that hit the bank
+                entries_data.append({'account_id': bank_account.id, 'debit': actual_cash, 'credit': 0})
                 entries_data.append({'account_id': party_account.id, 'debit': 0, 'credit': amount, 'ref_type': ref_info['type'], 'ref_number': ref_info['number']})
 
-            # --- Enhanced Narration (Rule 4) ---
-            v_date = line.date or document.document_date
-            date_tag = ""
-            if not v_date:
-                from django.utils import timezone
-                v_date = timezone.now().date()
-                date_tag = " [AUTO-DATE]"
-
-            period = v_date.strftime("%b %Y")
-            narration = f"Payment for {period} | {party_account.name} | Ref: {line.invoice_no or 'N/A'}{date_tag}"
+            v_date = line.date or document.document_date or datetime.date.today()
+            
+            # SECTION: The "To" Constraint Automation (Rule 4)
+            if is_payment:
+                # Payment: Dr [Party] To [Bank]
+                narration = f"Payment: Dr {party_account.name} To {bank_account.name} | {line.description or ''} | Ref: {line.invoice_no or 'N/A'}"
+            else:
+                # Receipt: Dr [Bank] To [Party]
+                narration = f"Receipt: Dr {bank_account.name} To {party_account.name} | {line.description or ''} | Ref: {line.invoice_no or 'N/A'}"
 
             voucher_data = {
                 'voucher_type': v_type,
@@ -248,6 +374,7 @@ class AutomationService:
             'AWS': 'Amazon Web Services'
         }
         
+        v_date = document.document_date or datetime.date.today()
         vendor_name = vendor_name_raw
         for key, professional_name in master_alias.items():
             if key in vendor_name_raw.upper():
@@ -302,6 +429,20 @@ class AutomationService:
                 voucher_type=v_type
             )
             
+            # --- INTERCOMPANY SYMMETRY CHECK (GOD-MODE) ---
+            # Ref: ERR-304, 316, 403
+            sister_biz = Business.objects.filter(
+                models.Q(gstin__iexact=vendor_gstin) | models.Q(name__icontains=vendor_name)
+            ).exclude(id=document.business.id).first()
+            
+            if sister_biz and document.business.is_intercompany_enabled:
+                logger.info(f"INTERCOMPANY DETECTED: {document.business.name} -> {sister_biz.name}")
+                # We can add a specialized narration or flag
+                # For now, we'll mark the document confidence higher and add a Forensic note
+                document.is_suspicious = False # Trusting known sister companies
+                document.accounting_logic += f"\n[Intercompany Sync]: Verified against sister entity {sister_biz.name}."
+                document.save()
+
             # --- GST Logic ---
             gst_rate_str = (line.gst_rate or "0").replace('%', '').strip()
             try:
@@ -429,17 +570,16 @@ class AutomationService:
         # 5. Voucher Persistence (CFO Standard Narration - Rule 4)
         tax_info = f"GST {', '.join(all_gst_rates)}" if all_gst_rates else "Non-GST"
         inv_no = document.document_number or "N/A"
-        
-        # Smart Date Fallback
-        v_date = document.document_date or (lines[0].date if lines.exists() else None)
-        date_warning = ""
-        if not v_date:
-            from django.utils import timezone
-            v_date = timezone.now().date()
-            date_warning = " | [AUTO-DATE]"
-
         period = v_date.strftime("%b %Y")
-        narration = f"{v_type.title()} for {period} | {vendor_name} | Ref: {inv_no}{date_warning}"
+        
+        # SECTION: The "To" Constraint Automation (Rule 4)
+        if is_purchase:
+            # Purchase: Dr [Expenses] To [Vendor]
+            summary_dr = ", ".join(all_gst_rates) if all_gst_rates else "Goods/Services"
+            narration = f"Purchase: Dr {summary_dr} To {party_account.name} | Inv: {inv_no} | {period}"
+        else:
+            # Sales: Dr [Customer] To [Income]
+            narration = f"Sales: Dr {party_account.name} To Revenue | Inv: {inv_no} | {period}"
 
         voucher_data = {
             'voucher_type': v_type,
@@ -453,10 +593,75 @@ class AutomationService:
         try:
             vch = LedgerService.create_voucher(document.business, voucher_data, entries_data)
             logger.info(f"Successfully created Voucher {vch.voucher_number} for Invoice Doc {document.id}")
+            
+            # --- START AMORTIZATION ENGINE (GOD-MODE) ---
+            cls._apply_amortization_audit(vch, lines)
+            
             return vch
         except Exception as e:
             logger.error(f"Voucher creation failed for Doc {document.id}: {e}")
             raise
+
+    @classmethod
+    def _apply_amortization_audit(cls, voucher, lines):
+        """
+        Scans for 'Annual', 'Subscription', or Date Ranges to trigger Matching Principle.
+        Ref: ERR-101, 151, 202
+        """
+        from apps.ledger.models import AmortizationSchedule, AmortizationMovement
+        
+        desc = " ".join([l.description or "" for l in lines]).upper()
+        keywords = ['ANNUAL', 'YEARLY', 'SUBSCRIPTION', '12 MONTH', 'RETAINER', 'INSURANCE']
+        
+        if any(k in desc for k in keywords) and voucher.total_amount > 1000:
+            logger.info(f"Amortization Triggered for Voucher {voucher.voucher_number}")
+            
+            # Identify the expense entry
+            expense_entry = voucher.entries.filter(debit__gt=0).exclude(account__group__name='Duties & Taxes').first()
+            if not expense_entry: return
+
+            # Resolve Asset Account (Prepaid)
+            business = voucher.business
+            original_acc = expense_entry.account
+            prepaid_name = f"Prepaid {original_acc.name}"
+            asset_acc = cls.get_or_create_default_account(business, prepaid_name, "Current Assets")
+            
+            # Move Debit from Expense to Asset
+            expense_entry.account = asset_acc
+            expense_entry.save()
+            
+            # Create Schedule
+            periods = 12 # Default to 12 if 'Annual'
+            if '3 YEAR' in desc: periods = 36
+            elif 'MONTHLY' in desc: periods = 1 # Usually not amortized but kept for audit
+            
+            start_date = voucher.date
+            # Simple month addition logic
+            import datetime
+            from dateutil.relativedelta import relativedelta
+            end_date = start_date + relativedelta(months=periods-1)
+            
+            schedule = AmortizationSchedule.objects.create(
+                business=business,
+                voucher=voucher,
+                asset_account=asset_acc,
+                expense_account=original_acc,
+                total_amount=voucher.total_amount,
+                start_date=start_date,
+                end_date=end_date,
+                periods=periods
+            )
+            
+            # Create Movements
+            monthly_amt = (voucher.total_amount / periods).quantize(Decimal('0.01'))
+            for i in range(periods):
+                AmortizationMovement.objects.create(
+                    schedule=schedule,
+                    date=start_date + relativedelta(months=i),
+                    amount=monthly_amt
+                )
+            
+            logger.info(f"Generated {periods} amortization movements for {original_acc.name}")
 
     @classmethod
     def reconcile_pending_payments(cls, business):
