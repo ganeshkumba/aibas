@@ -65,12 +65,15 @@ Designed for group organizations with multiple branches.
 ### **Apps & Modules**
 - **`core/`**: The backbone. Manages Business entities, Documents, and the high-speed `Processor` (AI Ingestion).
 - **`apps/ledger/`**: The Double-Entry Engine. Enforces GAAP rules, manages the Chart of Accounts, and generates Financial Statements (Trial Balance, P&L, Balance Sheet).
+- **`apps/audit/`**: **(New)** The Trust Layer. Implements SHA-256 hash-chained logs for immutable financial event tracking.
 - **`apps/ai_bridge/`**: The AI Gateway. Supports **Gemini 1.5 Flash** (Vision) and **Ollama** (Local Fallback).
 - **`apps/accounts/`**: Custom user management and authentication (Email-based login).
 
 ### **Core Services**
 - **`AutomationService`**: Bridges documents to vouchers. Handles statutory splits (TDS/GST) and the Reconciliation Engine.
 - **`LedgerService`**: The "CFO" logic. Generates health checks, manages voucher numbering, and handles multi-ledger balancing.
+- **`ForensicService`**: **(New)** Analyzes document metadata and IP anomalies to detect fraud early.
+- **`AmortizationEngine`**: **(New)** Manages deferred expenses and automated monthly recognition.
 - **`DocumentProcessor`**: Orchestrates AI extraction and database persistence.
 
 ---
