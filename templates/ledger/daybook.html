@@ -1,74 +1,79 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
-<div class="card" style="border-bottom: 3px solid var(--old-money-gold);">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+<div class="card" style="border-bottom: 3px solid var(--gh-orange);">
+  <div class="card-header">
     <div>
-      <h1 style="margin-bottom: 0.25rem;">Day Book</h1>
+      <h1 style="margin-bottom: 0.25rem; font-size: 1.5rem;">Day Book</h1>
       <div class="small" style="color: var(--text-secondary); font-weight: 700;">{{ business.name }} | Persistent Transaction Audit Trail</div>
     </div>
     <div style="text-align: right;">
-      <a href="{% url 'ledger:tally-export' %}?business_id={{ business.id }}" class="btn" style="background: var(--fb-blue); color: white;">
-        Export XML
+      <a href="{% url 'ledger:tally-export' %}?business_id={{ business.id }}" class="btn btn-secondary">
+        <i>📥</i> Export Tally XML
       </a>
     </div>
   </div>
 
-  <table style="width: 100%; border-collapse: collapse;">
-    <thead>
-      <tr style="background: #f0f2f5; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
-        <th style="padding: 1rem; border: 1px solid var(--border-classic);">Date</th>
-        <th style="padding: 1rem; border: 1px solid var(--border-classic);">Particulars / Narration</th>
-        <th style="padding: 1rem; border: 1px solid var(--border-classic);">Vch Type</th>
-        <th style="padding: 1rem; border: 1px solid var(--border-classic);">Vch No.</th>
-        <th style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right;">Amount (₹)</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in entries %}
-        <tr style="background: white;">
-          <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); font-size: 0.85rem; font-weight: 500;">
-            {{ item.date | date:"d-M-Y" }}
-          </td>
-          <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic);">
-            <div style="font-weight: 700; color: #1c1e21;">{{ item.particulars }}</div>
-            {% if item.voucher.narration %}
-              <div class="small" style="color: var(--text-secondary); font-style: italic; margin-top: 0.25rem;">
-                {{ item.voucher.narration }}
-              </div>
-            {% endif %}
-            {% if item.document %}
-                <div style="margin-top: 0.4rem;">
-                    <span class="tag" style="font-size: 8px; background: rgba(59, 130, 246, 0.1); color: #3b82f6;">DOC #{{ item.document_id | stringformat:".8s" }}</span>
-                </div>
-            {% endif %}
-          </td>
-          <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); font-size: 0.8rem; font-weight: 700;">
-            {{ item.voucher.get_voucher_type_display }}
-          </td>
-          <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); font-size: 0.85rem; font-family: 'JetBrains Mono';">
-            {{ item.voucher.voucher_number }}
-          </td>
-          <td style="padding: 0.75rem 1rem; border: 1px solid var(--border-classic); text-align: right; font-weight: 800;" class="ledger-number">
-             ₹{{ item.amount | floatformat:2 }}
-          </td>
-        </tr>
-      {% empty %}
+  <div class="card-body" style="padding: 0;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
         <tr>
-          <td colspan="5" style="padding: 4rem; text-align: center; color: var(--text-secondary);">
-            No persistent day book entries found. Either process a document or record a transaction to see data here.
+          <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Date</th>
+          <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Particulars / Narration</th>
+          <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Type</th>
+          <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Voucher #</th>
+          <th style="padding: 1rem; border-bottom: 1px solid var(--border-default); text-align: right;">Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in entries %}
+          <tr>
+            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted); font-size: 0.85rem; font-family: var(--font-data);">
+              {{ item.date | date:"d-M-Y" }}
+            </td>
+            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted);">
+              <div style="font-weight: 600; color: white;">{{ item.particulars }}</div>
+              {% if item.voucher.narration %}
+                <div style="color: var(--text-secondary); font-size: 0.8rem; font-style: italic; margin-top: 0.4rem; font-family: var(--font-data);">
+                  # {{ item.voucher.narration }}
+                </div>
+              {% endif %}
+              {% if item.document %}
+                  <div style="margin-top: 0.5rem;">
+                      <span class="tag tag-info" style="font-size: 10px;">REF DOC: {{ item.document_id | stringformat:".8s" }}</span>
+                  </div>
+              {% endif %}
+            </td>
+            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted);">
+              <span class="tag" style="background: rgba(188, 140, 255, 0.1); color: var(--accent); border-color: rgba(188, 140, 255, 0.3);">
+                {{ item.voucher.get_voucher_type_display }}
+              </span>
+            </td>
+            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted); font-family: var(--font-data); font-size: 0.85rem; color: var(--gh-blue);">
+              {{ item.voucher.voucher_number }}
+            </td>
+            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted); text-align: right; font-weight: 700;" class="ledger-number">
+               ₹{{ item.amount | floatformat:2 }}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" style="padding: 4rem; text-align: center; color: var(--text-secondary);">
+              <div style="font-size: 2rem; margin-bottom: 1rem;">📭</div>
+              No persistent day book entries found.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background-color: var(--bg-header); font-weight: 700;">
+          <td colspan="4" style="padding: 1rem; text-align: right; color: var(--text-secondary);">GAAP LIVE TOTALS (NON-DRAFT)</td>
+          <td style="padding: 1rem; text-align: right; color: var(--gh-green);" class="ledger-number">
+            ₹{{ total_dr | floatformat:2 }}
           </td>
         </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot style="background: #f0f2f5; font-weight: 800; border-top: 2px solid var(--border-classic);">
-      <tr>
-        <td colspan="4" style="padding: 1rem; text-align: right; border: 1px solid var(--border-classic);">LIVE TOTALS (NON-DRAFT)</td>
-        <td style="padding: 1rem; border: 1px solid var(--border-classic); text-align: right; color: var(--fb-blue);" class="ledger-number">
-          ₹{{ total_dr | floatformat:2 }}
-        </td>
-      </tr>
-    </tfoot>
-  </table>
+      </tfoot>
+    </table>
+  </div>
 </div>
 {% endblock %}

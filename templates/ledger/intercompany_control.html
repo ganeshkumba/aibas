@@ -3,15 +3,16 @@
 {% block content %}
 <style>
     .tower-header {
-        background: linear-gradient(135deg, #1a2a4b 0%, #3b5998 100%);
+        background: linear-gradient(135deg, #1a2a4b 0%, var(--bg-header) 100%);
         color: white;
         padding: 3rem;
-        border-radius: 12px;
+        border-radius: 6px;
         margin-bottom: 2rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 5px solid #c5a059;
+        border: 1px solid var(--border-default);
+        border-bottom: 4px solid var(--accent);
     }
 
     .entity-map {
@@ -23,30 +24,29 @@
     }
 
     .entity-node {
-        background: var(--card-background);
-        border: 2px solid var(--border-classic);
+        background: var(--bg-header);
+        border: 2px solid var(--border-default);
         padding: 1.5rem 3rem;
         border-radius: 50px;
         text-align: center;
         min-width: 250px;
         position: relative;
-        box-shadow: var(--card-shadow);
     }
 
     .entity-node.parent {
-        border-color: #c5a059;
-        background: #fffdf9;
+        border-color: var(--gh-orange);
     }
 
     .entity-node.active {
-        border-color: var(--fb-blue);
-        box-shadow: 0 0 20px rgba(59, 89, 152, 0.2);
+        border-color: var(--gh-blue);
+        background: var(--bg-card);
+        box-shadow: 0 0 20px rgba(56, 139, 253, 0.1);
     }
 
     .connector {
         width: 2px;
         height: 50px;
-        background: var(--border-classic);
+        background: var(--border-default);
         position: relative;
     }
 
@@ -56,109 +56,121 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: var(--fb-bg);
+        background: var(--bg-canvas);
         padding: 4px;
         font-size: 0.8rem;
     }
 
     .inter-transaction-card {
-        border-left: 4px solid #c5a059;
-        padding-left: 1.5rem;
+        border-left: 4px solid var(--gh-orange);
     }
 </style>
 
 <div class="tower-header">
     <div>
-        <h1 style="color: white; margin: 0;">Group Control Tower</h1>
-        <div style="opacity: 0.9; font-weight: 600; font-size: 0.9rem;">Multi-Entity Symmetry & Intercompany Reconciliation</div>
+        <h1 style="color: white; margin: 0; font-size: 1.75rem;">Group Control Tower</h1>
+        <div style="color: var(--text-secondary); font-weight: 500; font-size: 0.9rem; margin-top: 5px; font-family: var(--font-data);">Multi-Entity Symmetry & Intercompany Reconciliation</div>
     </div>
     <div style="text-align: right;">
-        <span class="tag" style="background: #c5a059; color: white;">Consolidated View</span>
+        <span class="tag tag-info" style="border-width: 2px;">Consolidated Matrix</span>
     </div>
 </div>
 
 <div class="card">
-    <h3 style="text-align: center; margin-bottom: 2rem;">Organizational Hierarchy</h3>
-    <div class="entity-map">
-        {% if parent %}
-            <div class="entity-node parent">
-                <div class="small" style="color: #c5a059; font-weight: 900;">PARENT ENTITY</div>
-                <div style="font-weight: 700; font-size: 1.2rem;">{{ parent.name }}</div>
-            </div>
-            <div class="connector"></div>
-        {% endif %}
+    <div class="card-header">
+        <h3 style="margin: 0; font-size: 1rem;">Organizational Hierarchy / Legal Structure</h3>
+    </div>
+    <div class="card-body">
+        <div class="entity-map">
+            {% if parent %}
+                <div class="entity-node parent">
+                    <div class="small" style="color: var(--gh-orange); font-weight: 800; text-transform: uppercase;">Holding / Parent</div>
+                    <div style="font-weight: 700; font-size: 1.25rem; color: white;">{{ parent.name }}</div>
+                </div>
+                <div class="connector"></div>
+            {% endif %}
 
-        <div class="entity-node active">
-            <div class="small" style="color: var(--fb-blue); font-weight: 900;">CURRENT HUB</div>
-            <div style="font-weight: 700; font-size: 1.2rem;">{{ business.name }}</div>
+            <div class="entity-node active">
+                <div class="small" style="color: var(--gh-blue); font-weight: 800; text-transform: uppercase;">Active Context</div>
+                <div style="font-weight: 700; font-size: 1.25rem; color: white;">{{ business.name }}</div>
+            </div>
+
+            {% if subsidiaries %}
+                <div class="connector"></div>
+                <div style="display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center;">
+                    {% for sub in subsidiaries %}
+                        <div class="entity-node">
+                            <div class="small" style="color: var(--text-secondary); font-weight: 800; text-transform: uppercase;">Subsidiary</div>
+                            <div style="font-weight: 600; color: white;">{{ sub.name }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card inter-transaction-card">
+    <div class="card-header">
+        <h3 style="margin: 0; font-size: 1rem;">Related Party Transactions (Detected)</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div style="padding: 1.25rem; border-bottom: 1px solid var(--border-muted);">
+            <p class="small" style="color: var(--text-secondary);">These transactions were identified as involving other entities within your corporate group. The system enforces strict symmetric recording.</p>
         </div>
 
-        {% if subsidiaries %}
-            <div class="connector"></div>
-            <div style="display: flex; gap: 2rem;">
-                {% for sub in subsidiaries %}
-                    <div class="entity-node">
-                        <div class="small" style="color: var(--text-secondary); font-weight: 900;">SUBSIDIARY</div>
-                        <div style="font-weight: 700;">{{ sub.name }}</div>
-                    </div>
-                {% endfor %}
+        {% if intercompany_docs %}
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Document</th>
+                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Counterparty Entity</th>
+                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Logic Bridge</th>
+                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default); text-align: right;">Integrity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in intercompany_docs %}
+                        <tr>
+                            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted);">
+                                <div style="font-weight: 700; color: white;">#{{ doc.id | stringformat:".8s" }}</div>
+                                <div class="small" style="color: var(--text-secondary); font-family: var(--font-data);">{{ doc.uploaded_at | date:"d M Y" }}</div>
+                            </td>
+                            <td style="padding: 1rem; font-weight: 600; color: white; border-bottom: 1px solid var(--border-muted);">
+                                {% if doc.lines.all.0.vendor %}
+                                    {{ doc.lines.all.0.vendor }}
+                                {% else %}
+                                    Internal Party Registry
+                                {% endif %}
+                            </td>
+                            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted);">
+                                <div class="small" style="color: var(--gh-orange); font-weight: 700; font-family: var(--font-data);">{{ doc.accounting_logic }}</div>
+                            </td>
+                            <td style="padding: 1rem; text-align: right; border-bottom: 1px solid var(--border-muted);">
+                                <span class="tag tag-success">Verification Symmetric</span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;">🔗</div>
+                <div class="small">No intercompany transactions flagged in the current audit sequence.</div>
             </div>
         {% endif %}
     </div>
 </div>
 
-<div class="card inter-transaction-card">
-    <h3>Related Party Transactions</h3>
-    <p class="small" style="margin-bottom: 2rem;">These transactions were detected as involving other entities within your group. Ensure symmetric recording in both ledgers.</p>
-
-    {% if intercompany_docs %}
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr style="text-align: left; font-size: 0.75rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-classic);">
-                    <th style="padding: 1rem;">Document</th>
-                    <th style="padding: 1rem;">Counterparty</th>
-                    <th style="padding: 1rem;">Logic Detected</th>
-                    <th style="padding: 1rem;">Integrity Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for doc in intercompany_docs %}
-                    <tr style="border-bottom: 1px solid rgba(128,128,128,0.05);">
-                        <td style="padding: 1rem;">
-                            <div style="font-weight: 700;">#{{ doc.id | stringformat:".8s" }}</div>
-                            <div class="small">{{ doc.uploaded_at | date:"d M Y" }}</div>
-                        </td>
-                        <td style="padding: 1rem; font-weight: 700;">
-                            {% if doc.lines.all.0.vendor %}
-                                {{ doc.lines.all.0.vendor }}
-                            {% else %}
-                                Internal Party
-                            {% endif %}
-                        </td>
-                        <td style="padding: 1rem;">
-                            <div class="small" style="color: #c5a059; font-weight: 700;">{{ doc.accounting_logic }}</div>
-                        </td>
-                        <td style="padding: 1rem;">
-                            <span class="tag tag-success">Symmetric</span>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-            <div class="small">No intercompany transactions flagged in the current period.</div>
-        </div>
-    {% endif %}
-</div>
-
-<div class="card" style="border-top: 1px solid #c5a059; background: #fffdf9;">
-    <h4 style="color: #c5a059; margin-bottom: 1rem;">Audit Observation (ERR-252/260)</h4>
-    <p class="small">
-        Multi-entity consolidation requires elimination of intercompany balances. 
-        The "Group Sync" feature ensures that a Payable in <strong>{{ business.name }}</strong> 
-        is automatically matched by a Receivable in the related party entity.
-    </p>
+<div class="card" style="border-top: 2px solid var(--gh-orange); background: rgba(209, 109, 14, 0.05); margin-top: 2rem;">
+    <div class="card-body">
+        <h4 style="color: var(--gh-orange); margin-bottom: 1rem; font-size: 0.9rem;">Audit Intelligence Hub (ERR-252/260)</h4>
+        <p class="small" style="color: var(--text-secondary); line-height: 1.6;">
+            Multi-entity consolidation requires elimination of intercompany balances. 
+            The "Group Sync" feature ensures that any <strong>Payable</strong> sitting in <strong>{{ business.name }}</strong> 
+            is mathematically matched by a corresponding <strong>Receivable</strong> in the counterparty ledger.
+        </p>
+    </div>
 </div>
 
 {% endblock %}

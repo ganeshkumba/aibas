@@ -181,7 +181,7 @@ def document_detail(request, pk):
         'lines': lines, 
         'vouchers': vouchers,
         'all_accounts': doc.business.accounts.all().select_related('group').order_by('name'),
-        'all_groups': doc.business.account_groups.all().order_by('name'),
+        'all_groups': doc.business.accountgroups.all().order_by('name'),
         'metrics': {
             'total_value': doc_total,
             'match_count': processed_count,

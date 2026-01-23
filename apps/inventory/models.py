@@ -1,20 +1,19 @@
 from django.db import models
 from core.models import Business, Document, ExtractedLineItem
 from apps.ledger.models import Account
+from apps.common.models import BusinessOwnedModel
 
-class Category(models.Model):
+class Category(BusinessOwnedModel):
     name = models.CharField(max_length=100)
-    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='inventory_categories')
     description = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.business.name})"
 
-class Product(models.Model):
+class Product(BusinessOwnedModel):
     """
     Core product definition.
     """
-    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='products')
     name = models.CharField(max_length=255)
     sku = models.CharField(max_length=100, blank=True, null=True)
     hsn_code = models.CharField(max_length=20, blank=True, null=True)
@@ -32,9 +31,6 @@ class Product(models.Model):
     track_inventory = models.BooleanField(default=True)
     track_batch = models.BooleanField(default=False)
     low_stock_threshold = models.DecimalField(max_digits=14, decimal_places=2, default=0.00)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.name} ({self.sku or 'No SKU'})"
@@ -45,7 +41,7 @@ class Product(models.Model):
         outgoing = StockMovement.objects.filter(product=self, type='OUT').aggregate(models.Sum('quantity'))['quantity__sum'] or 0
         return incoming - outgoing
 
-class Batch(models.Model):
+class Batch(BusinessOwnedModel):
     """
     GOD-MODE: Automatic Batch & Expiry tracking extracted by AI.
     """
@@ -53,13 +49,11 @@ class Batch(models.Model):
     batch_number = models.CharField(max_length=100)
     expiry_date = models.DateField(null=True, blank=True)
     manufacturing_date = models.DateField(null=True, blank=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.product.name} - Batch {self.batch_number}"
 
-class StockMovement(models.Model):
+class StockMovement(BusinessOwnedModel):
     """
     Every time stock moves (Purchase, Sale, Adjustment).
     """
@@ -81,7 +75,6 @@ class StockMovement(models.Model):
     
     date = models.DateField()
     remarks = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.type} {self.quantity} {self.product.name} on {self.date}"

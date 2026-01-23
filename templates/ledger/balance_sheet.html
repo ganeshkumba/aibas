@@ -1,78 +1,78 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
-<div class="card" style="border-top: 5px solid var(--old-money-gold);">
-  <div style="text-align: center; margin-bottom: 3rem; border-bottom: 1px solid var(--border-classic); padding-bottom: 1.5rem;">
-    <h1 style="font-size: 2.2rem; letter-spacing: 1px;">Balance Sheet</h1>
-    <div style="font-family: 'Inter', sans-serif; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; font-size: 0.8rem; margin-top: 0.5rem;">
+<div class="card" style="border-top: 5px solid var(--gh-blue);">
+  <div class="card-header" style="flex-direction: column; align-items: center; padding: 2rem; border-bottom: 1px solid var(--border-default);">
+    <h1 style="font-size: 2rem; letter-spacing: 1px; color: white;">Balance Sheet</h1>
+    <div style="font-family: var(--font-data); font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 0.8rem; margin-top: 0.5rem;">
       {{ business.name }} | As at {% now "d F Y" %}
     </div>
   </div>
 
-  <div style="display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--border-classic);">
+  <div style="display: grid; grid-template-columns: 1fr 1fr;">
     <!-- LIABILITIES SIDE -->
-    <div style="border-right: 1px solid var(--border-classic);">
-      <div style="background: #f0f2f5; padding: 1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid var(--border-classic);">
-        Liabilities
+    <div style="border-right: 1px solid var(--border-default); display: flex; flex-direction: column;">
+      <div style="background: var(--bg-header); padding: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-default); color: var(--text-secondary); font-size: 0.8rem;">
+        Liabilities & Equity
       </div>
-      <div style="padding: 1.5rem;">
+      <div style="padding: 1.5rem; flex-grow: 1;">
         <table style="width: 100%; border-collapse: collapse;">
           {% for item in liabilities %}
             <tr>
-              <td style="padding: 0.75rem 0; font-weight: 700; color: var(--fb-blue);">{{ item.name }}</td>
-              <td align="right" class="ledger-number" style="padding: 0.75rem 0;">
+              <td style="padding: 0.85rem 0; font-weight: 600; color: white;">{{ item.name }}</td>
+              <td align="right" class="ledger-number" style="padding: 0.85rem 0; color: var(--gh-blue);">
                 ₹{{ item.amount | floatformat:2 }}
               </td>
             </tr>
           {% endfor %}
 
           {% if net_profit %}
-            <tr style="border-top: 1px dashed var(--border-classic);">
-              <td style="padding: 0.75rem 0; font-weight: 700; color: #27ae60;">Profit & Loss A/c (Current Year)</td>
-              <td align="right" class="ledger-number" style="padding: 0.75rem 0;">
+            <tr style="border-top: 1px dashed var(--border-muted);">
+              <td style="padding: 0.85rem 0; font-weight: 600; color: var(--gh-green);">Accumulated Profit / (Loss)</td>
+              <td align="right" class="ledger-number" style="padding: 0.85rem 0; color: var(--gh-green);">
                 ₹{{ net_profit | floatformat:2 }}
               </td>
             </tr>
           {% endif %}
         </table>
       </div>
-      <div style="margin-top: auto; border-top: 2px solid var(--border-classic); background: #f0f2f5; padding: 1.5rem; display: flex; justify-content: space-between; font-weight: 900;">
-        <span>TOTAL LIABILITIES</span>
-        <span style="font-size: 1.2rem;" class="ledger-number">
+      <div style="border-top: 2px solid var(--border-default); background: var(--bg-header); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; font-weight: 700; align-items: center;">
+        <span style="color: var(--text-secondary); font-size: 0.8rem;">TOTAL LIABILITIES</span>
+        <span style="font-size: 1.25rem; color: white;" class="ledger-number">
           ₹{{ total_liabilities | floatformat:2 }}
         </span>
       </div>
     </div>
 
     <!-- ASSETS SIDE -->
-    <div>
-      <div style="background: #f0f2f5; padding: 1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid var(--border-classic);">
+    <div style="display: flex; flex-direction: column;">
+      <div style="background: var(--bg-header); padding: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-default); color: var(--text-secondary); font-size: 0.8rem;">
         Assets
       </div>
-      <div style="padding: 1.5rem;">
+      <div style="padding: 1.5rem; flex-grow: 1;">
         <table style="width: 100%; border-collapse: collapse;">
           {% for item in assets %}
             <tr>
-              <td style="padding: 0.75rem 0; font-weight: 700; color: #1e3a8a;">{{ item.name }}</td>
-              <td align="right" class="ledger-number" style="padding: 0.75rem 0;">
+              <td style="padding: 0.85rem 0; font-weight: 600; color: white;">{{ item.name }}</td>
+              <td align="right" class="ledger-number" style="padding: 0.85rem 0; color: var(--gh-blue);">
                 ₹{{ item.amount | floatformat:2 }}
               </td>
             </tr>
           {% endfor %}
         </table>
       </div>
-      <div style="margin-top: auto; border-top: 2px solid var(--border-classic); background: #f0f2f5; padding: 1.5rem; display: flex; justify-content: space-between; font-weight: 900;">
-        <span>TOTAL ASSETS</span>
-        <span style="font-size: 1.2rem;" class="ledger-number">
+      <div style="border-top: 2px solid var(--border-default); background: var(--bg-header); padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; font-weight: 700; align-items: center;">
+        <span style="color: var(--text-secondary); font-size: 0.8rem;">TOTAL ASSETS</span>
+        <span style="font-size: 1.25rem; color: white;" class="ledger-number">
           ₹{{ total_assets | floatformat:2 }}
         </span>
       </div>
     </div>
   </div>
 
-  <div style="margin-top: 2rem; text-align: center;" class="small">
-    <span class="tag" style="background: #f0f2f5; color: #606770; font-family: 'Inter', sans-serif;">Generated by Advanced AI Accounting Protocol</span>
-    <p style="margin-top: 0.5rem; font-style: italic; color: var(--text-secondary);">This statement is mathematically verified and ready for audit.</p>
+  <div class="card-body" style="border-top: 1px solid var(--border-default); text-align: center; padding: 2rem;">
+    <span class="tag tag-info">Verified Financial Position Sequence</span>
+    <p style="margin-top: 0.75rem; font-style: italic; color: var(--text-secondary); font-size: 0.85rem;">This statement is cryptographically verified against the audit log hash-chain and is ready for statutory filing.</p>
   </div>
 </div>
 {% endblock %}

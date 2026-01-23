@@ -2,25 +2,22 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
-from apps.common.views.base import ApiView
+from apps.common.views.base import ApiView, business_required, get_business_or_404
 from core.models import Business, Document
-from .models import Voucher, Account, AccountGroup, FinancialYear, JournalEntry, VoucherType, AmortizationSchedule, AmortizationMovement
+from .models import Voucher, Account, AccountGroup, FinancialYear, JournalEntry, VoucherType, AmortizationSchedule, AmortizationMovement, DayBook, TrialBalanceSnapshot, ProfitAndLossSnapshot
 
 from .services.ledger_service import LedgerService
 from decimal import Decimal
-from django.db import models
-from django.db.models import Sum, Q
+from django.db import models, transaction
+from django.db.models import Sum, Q, Count
 from django.contrib import messages
 import json
 from .services.automation_service import AutomationService
 
 @login_required
 @require_POST
-def reconcile_ledgers(request, biz_pk):
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def reconcile_ledgers(request, business):
     
     matches_found = AutomationService.reconcile_pending_payments(business)
     
@@ -29,18 +26,12 @@ def reconcile_ledgers(request, biz_pk):
     else:
         messages.info(request, "Reconciliation Engine finished: No new matches found currently.")
         
-    return redirect('ledger:trial-balance', biz_pk=biz_pk)
+    return redirect('ledger:trial-balance', biz_pk=business.pk)
 
 @login_required
 @require_POST
-def run_cleanup_protocol(request, biz_pk):
-    """
-    Triggers the Universal Corrections Protocol (Section 7)
-    """
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def run_cleanup_protocol(request, business):
     
     corrections = LedgerService.smart_cleanup(business)
     
@@ -52,17 +43,12 @@ def run_cleanup_protocol(request, biz_pk):
     else:
         messages.info(request, "Cleanup Complete: No inconsistencies found. Your ledger is GAAP compliant.")
         
-    return redirect('ledger:trial-balance', biz_pk=biz_pk)
+    return redirect('ledger:trial-balance', biz_pk=business.pk)
 
 @login_required
-def day_book_view(request, biz_pk):
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def day_book_view(request, business):
     
-    # Use the persistent DayBook model
-    from .models import DayBook
     entries = DayBook.objects.filter(business=business).select_related('voucher', 'document').order_by('date', 'created_at')
     
     # Still calculate totals from live vouchers for the footer
@@ -77,11 +63,8 @@ def day_book_view(request, biz_pk):
     })
 
 @login_required
-def trial_balance_view(request, biz_pk):
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def trial_balance_view(request, business):
     
     # Elite CFO Strategy: Use aggregation for massive performance gains
     # Calculate all balances in a single pass
@@ -120,8 +103,6 @@ def trial_balance_view(request, biz_pk):
             
     health_checks = LedgerService.get_accounting_health_checks(business)
     
-    # Snapshot History
-    from .models import TrialBalanceSnapshot
     snapshots = TrialBalanceSnapshot.objects.filter(business=business).order_by('-created_at')[:5]
             
     return render(request, 'ledger/trial_balance.html', {
@@ -134,14 +115,9 @@ def trial_balance_view(request, biz_pk):
     })
 
 @login_required
-def profit_loss_view(request, biz_pk):
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def profit_loss_view(request, business):
     
-    # Pull from the latest persistent snapshot if it exists
-    from .models import ProfitAndLossSnapshot
     latest_snap = ProfitAndLossSnapshot.objects.filter(business=business).order_by('-created_at').first()
     
     if latest_snap:
@@ -169,11 +145,8 @@ def profit_loss_view(request, biz_pk):
     })
 
 @login_required
-def balance_sheet_view(request, biz_pk):
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def balance_sheet_view(request, business):
     
     # 1. Assets
     asset_accounts = Account.objects.filter(business=business, group__classification='ASSET')
@@ -438,22 +411,19 @@ def create_account_and_reclassify(request):
     return redirect(request.META.get('HTTP_REFERER', '/'))
 @login_required
 @require_POST
-def record_capital_infusion(request, biz_pk):
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def record_capital_infusion(request, business):
     
     amount_str = request.POST.get('amount', '0')
     try:
         amount = Decimal(amount_str)
     except:
         messages.error(request, "Invalid amount.")
-        return redirect('ledger:trial-balance', biz_pk=biz_pk)
+        return redirect('ledger:trial-balance', biz_pk=business.pk)
 
     if amount <= 0:
         messages.error(request, "Amount must be positive.")
-        return redirect('ledger:trial-balance', biz_pk=biz_pk)
+        return redirect('ledger:trial-balance', biz_pk=business.pk)
 
     # 1. Identify/Create Ledgers
     from .services.automation_service import AutomationService
@@ -483,20 +453,12 @@ def record_capital_infusion(request, biz_pk):
     except Exception as e:
         messages.error(request, f"Failed to record infusion: {e}")
 
-    return redirect('ledger:trial-balance', biz_pk=biz_pk)
+    return redirect('ledger:trial-balance', biz_pk=business.pk)
 
 @login_required
 @require_POST
-def purge_business_data(request, biz_pk):
-    """
-    SECTION 8: The Nuclear Option.
-    Wipes all accounting records while keeping the Business profile intact.
-    Used for clearing systemic errors or starting fresh.
-    """
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def purge_business_data(request, business):
     
     with transaction.atomic():
         # 1. This cascades to most things (DayBook, Snapshots, Entries, Movements)
@@ -514,14 +476,11 @@ def purge_business_data(request, biz_pk):
         VoucherSeries.objects.filter(business=business).update(current_number=1)
 
     messages.success(request, f"Nuclear Purge Complete: All records for {business.name} have been annihilated. Clean slate initialized.")
-    return redirect('core:business_detail', pk=biz_pk)
+    return redirect('core:business_detail', pk=business.pk)
 
 @login_required
-def forensic_dashboard_view(request, biz_pk):
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def forensic_dashboard_view(request, business):
     
     suspicious_docs = Document.objects.filter(business=business, is_suspicious=True).order_by('-uploaded_at')
     
@@ -536,11 +495,8 @@ def forensic_dashboard_view(request, biz_pk):
     })
 
 @login_required
-def amortization_tracker_view(request, biz_pk):
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def amortization_tracker_view(request, business):
     
     schedules = AmortizationSchedule.objects.filter(business=business).prefetch_related('movements')
     
@@ -558,11 +514,8 @@ def amortization_tracker_view(request, biz_pk):
     })
 
 @login_required
-def intercompany_control_tower_view(request, biz_pk):
-    if request.user.is_superuser:
-        business = get_object_or_404(Business, pk=biz_pk)
-    else:
-        business = get_object_or_404(Business, pk=biz_pk, created_by=request.user)
+@business_required
+def intercompany_control_tower_view(request, business):
     
     subsidiaries = Business.objects.filter(parent=business)
     parent = business.parent
@@ -578,11 +531,10 @@ def intercompany_control_tower_view(request, biz_pk):
     })
 
 @login_required
-def security_performance_audit_view(request, biz_pk):
-    if not request.user.is_superuser:
+@business_required
+def security_performance_audit_view(request, business):
+    if not (request.user.is_superuser or business.owner == request.user or business.created_by == request.user):
         raise PermissionDenied
-        
-    business = get_object_or_404(Business, pk=biz_pk)
     
     # Audit Log Chain Integrity Check
     from apps.audit.models import AuditLog

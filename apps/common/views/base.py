@@ -3,6 +3,8 @@ import logging
 from django.views import View
 from django.http import JsonResponse
 from django.core.exceptions import ValidationError, PermissionDenied
+from django.shortcuts import get_object_or_404
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,27 @@ class ApiView(View):
 
     def get_json_body(self):
         try:
-            return json.loads(self.request.body)
+            return json.loads(self.request.body or '{}')
         except json.JSONDecodeError:
             raise ValidationError("Invalid JSON body")
+
+def get_business_or_404(request, pk):
+    """
+    Centralized resolver for Business context with permission check.
+    """
+    from core.models import Business
+    if request.user.is_superuser:
+        return get_object_or_404(Business, pk=pk)
+    return get_object_or_404(Business, pk=pk, created_by=request.user)
+
+def business_required(view_func):
+    """
+    Decorator that resolves business context and adds it to the request object.
+    Usage: @business_required
+           def my_view(request, business, ...):
+    """
+    @wraps(view_func)
+    def _wrapped_view(request, biz_pk, *args, **kwargs):
+        business = get_business_or_404(request, biz_pk)
+        return view_func(request, business, *args, **kwargs)
+    return _wrapped_view

@@ -3,27 +3,28 @@
 {% block content %}
 <style>
     .amort-header {
-        background: linear-gradient(135deg, #1877f2 0%, #00d2ff 100%);
+        background: linear-gradient(135deg, #1a2a4b 0%, var(--bg-header) 100%);
         color: white;
         padding: 2.5rem;
-        border-radius: 12px;
+        border-radius: 6px;
         margin-bottom: 2rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        border: 1px solid var(--border-default);
     }
 
     .amort-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
         gap: 1.5rem;
         margin-bottom: 2rem;
     }
 
     .amort-card {
-        background: var(--card-background);
-        border: 1px solid var(--border-classic);
-        border-radius: 12px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-default);
+        border-radius: 6px;
         padding: 1.5rem;
         position: relative;
         overflow: hidden;
@@ -36,72 +37,78 @@
         left: 0;
         width: 4px;
         height: 100%;
-        background: #1877f2;
+        background: var(--gh-blue);
     }
 
     .progress-bar {
-        height: 8px;
-        background: var(--btn-secondary-bg);
-        border-radius: 4px;
-        margin: 1rem 0;
+        height: 6px;
+        background: var(--bg-header);
+        border-radius: 3px;
+        margin: 1.25rem 0;
         overflow: hidden;
+        border: 1px solid var(--border-muted);
     }
 
     .progress-fill {
         height: 100%;
-        background: #1877f2;
+        background: var(--gh-green);
         transition: width 0.5s ease-out;
     }
 
     .movement-list {
-        margin-top: 1rem;
-        border-top: 1px solid var(--border-classic);
+        margin-top: 1.25rem;
+        border-top: 1px solid var(--border-default);
         padding-top: 1rem;
-        max-height: 200px;
+        max-height: 250px;
         overflow-y: auto;
     }
 
     .movement-item {
         display: flex;
         justify-content: space-between;
-        font-size: 0.8rem;
-        padding: 0.4rem 0;
-        border-bottom: 1px dashed rgba(128,128,128,0.1);
+        font-size: 0.85rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-muted);
+        font-family: var(--font-data);
+    }
+
+    .movement-item:last-child {
+        border-bottom: none;
     }
 </style>
 
 <div class="amort-header">
     <div>
-        <h1 style="color: white; margin: 0;">Amortization Engine</h1>
-        <div style="opacity: 0.9; font-weight: 600; font-size: 0.9rem;">Automated Matching Principle & Deferred Expense Tracking</div>
+        <h1 style="color: white; margin: 0; font-size: 1.75rem;">Amortization Engine</h1>
+        <div style="color: var(--text-secondary); font-weight: 500; font-size: 0.9rem; margin-top: 5px; font-family: var(--font-data);">Automated Matching Principle & Deferred Expense Tracking</div>
     </div>
     <div style="text-align: right;">
-        <div class="small" style="color: rgba(255,255,255,0.7); font-weight: 800; text-transform: uppercase;">Total Prepaid Asset Base</div>
-        <div style="font-size: 2rem; font-weight: 900;">₹{{ total_prepaid|floatformat:2 }}</div>
+        <div class="small" style="color: var(--text-secondary); font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Prepaid Asset Base</div>
+        <div style="font-size: 2.25rem; font-weight: 700; color: var(--gh-blue); font-family: var(--font-data);">₹{{ total_prepaid|floatformat:2 }}</div>
     </div>
 </div>
 
-<h3 style="margin-bottom: 1.5rem;">Active Amortization Schedules</h3>
+<h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; color: white;">Active Recognition Schedules</h3>
 {% if active_schedules %}
     <div class="amort-grid">
         {% for schedule in active_schedules %}
             <div class="amort-card">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                    <div>
-                        <div style="font-weight: 800; font-size: 1.1rem;">{{ schedule.voucher.narration|truncatechars:35 }}</div>
-                        <div class="small">Ref: {{ schedule.voucher.voucher_number }}</div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 600; font-size: 1.1rem; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ schedule.voucher.narration }}</div>
+                        <div class="small" style="color: var(--gh-blue); font-family: var(--font-data); margin-top: 4px;"># {{ schedule.voucher.voucher_number }}</div>
                     </div>
-                    <span class="tag tag-success">Active</span>
+                    <span class="tag tag-info" style="margin-left: 10px;">Ongoing</span>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; padding: 1rem; background: var(--bg-header); border-radius: 4px; border: 1px solid var(--border-muted);">
                     <div>
-                        <div class="small" style="font-weight: 800;">TOTAL AMOUNT</div>
-                        <div style="font-weight: 700; color: var(--fb-blue);">₹{{ schedule.total_amount|floatformat:2 }}</div>
+                        <div class="small" style="font-weight: 700; color: var(--text-secondary);">ASSET CAP</div>
+                        <div style="font-weight: 600; color: var(--gh-green); font-family: var(--font-data);">₹{{ schedule.total_amount|floatformat:2 }}</div>
                     </div>
                     <div>
-                        <div class="small" style="font-weight: 800;">PERIOD</div>
-                        <div style="font-weight: 700;">{{ schedule.periods }} Months</div>
+                        <div class="small" style="font-weight: 700; color: var(--text-secondary);">DURATION</div>
+                        <div style="font-weight: 600; color: white; font-family: var(--font-data);">{{ schedule.periods }} Periods</div>
                     </div>
                 </div>
 
@@ -110,21 +117,21 @@
                     <div class="progress-fill" style="width: {% widthratio posted_count schedule.periods 100 %}%;"></div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="small">Recognized: {{ posted_count }} / {{ schedule.periods }} periods</div>
-                    <div class="small" style="font-weight: 800;">{{ schedule.end_date|date:"F Y" }} Completion</div>
+                    <div class="small" style="color: var(--text-secondary);">Sync: <span style="color: white; font-weight: 600;">{{ posted_count }} / {{ schedule.periods }}</span> posted</div>
+                    <div class="small" style="font-weight: 600; color: var(--accent);">{{ schedule.end_date|date:"M Y" }} END</div>
                 </div>
                 {% endwith %}
 
                 <div class="movement-list">
                     {% for move in schedule.movements.all %}
                         <div class="movement-item">
-                            <span style="font-weight: 600;">{{ move.date|date:"M Y" }}</span>
-                            <span>₹{{ move.amount|floatformat:2 }}</span>
+                            <span style="font-weight: 600; color: white;">{{ move.date|date:"F Y" }}</span>
+                            <span style="color: var(--gh-blue);">₹{{ move.amount|floatformat:2 }}</span>
                             <span>
                                 {% if move.is_posted %}
-                                    <span style="color: #52c41a;">✔️ Posted</span>
+                                    <span class="tag tag-success" style="font-size: 9px; padding: 1px 4px;">POSTED</span>
                                 {% else %}
-                                    <span style="color: var(--text-secondary);">⏳ Pending</span>
+                                    <span class="tag" style="font-size: 9px; padding: 1px 4px; background: rgba(139, 148, 158, 0.1); color: var(--text-secondary);">PENDING</span>
                                 {% endif %}
                             </span>
                         </div>
@@ -134,26 +141,25 @@
         {% endfor %}
     </div>
 {% else %}
-    <div class="card" style="text-align: center; padding: 4rem;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
-        <h4>No Active Schedules</h4>
-        <div class="small">Prepaid expenses and annual subscriptions will appear here automatically after detection.</div>
+    <div class="card" style="text-align: center; padding: 5rem 2rem;">
+        <div style="font-size: 3rem; margin-bottom: 1.5rem;">📅</div>
+        <h4 style="color: white;">No Active Recognition Schedules identified</h4>
+        <div class="small" style="color: var(--text-secondary); max-width: 400px; margin: 10px auto;">Prepaid expenses, insurance, and annual subscriptions will appear here automatically after AI detection.</div>
     </div>
 {% endif %}
 
 {% if completed_schedules %}
-    <h3 style="margin-top: 3rem; margin-bottom: 1.5rem; opacity: 0.6;">Completed / Historical Schedules</h3>
-    <div class="amort-grid" style="opacity: 0.7;">
+    <h3 style="margin-top: 4rem; margin-bottom: 1.5rem; color: var(--text-secondary); font-size: 1rem;">Historical Schedules (Settled)</h3>
+    <div class="amort-grid" style="opacity: 0.6;">
         {% for schedule in completed_schedules %}
-            <div class="amort-card">
-                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="amort-card" style="border-style: dashed;">
+                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
-                        <div style="font-weight: 800; font-size: 1.1rem;">{{ schedule.voucher.narration|truncatechars:35 }}</div>
-                        <div class="small">Fully Amortized</div>
+                        <div style="font-weight: 600; color: white;">{{ schedule.voucher.narration|truncatechars:40 }}</div>
+                        <div class="small" style="font-family: var(--font-data); margin-top: 4px;">Fully Amortized sequence completed</div>
                     </div>
-                    <span class="tag" style="background: var(--btn-secondary-bg); color: var(--text-secondary);">Closed</span>
                 </div>
-                <div style="font-weight: 700;">Total: ₹{{ schedule.total_amount|floatformat:2 }}</div>
+                <div style="margin-top: 1rem; font-weight: 600; font-family: var(--font-data); color: var(--gh-green);">₹{{ schedule.total_amount|floatformat:2 }} Total</div>
             </div>
         {% endfor %}
     </div>
