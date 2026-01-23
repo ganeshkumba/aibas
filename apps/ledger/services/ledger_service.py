@@ -5,6 +5,7 @@ from decimal import Decimal
 from ..models import Voucher, JournalEntry, Account, FinancialYear, VoucherSeries, AccountGroup, VoucherType, DayBook, TrialBalanceSnapshot, ProfitAndLossSnapshot
 import datetime
 import hashlib
+from apps.ledger.services.utils import LedgerCommonUtils
 
 class LedgerService:
     @staticmethod
@@ -195,22 +196,7 @@ class LedgerService:
         """
         Creates the current financial year (April to March) for the business.
         """
-        today = datetime.date.today()
-        # Indian FY: starts April 1st.
-        if today.month >= 4:
-            start_date = datetime.date(today.year, 4, 1)
-            end_date = datetime.date(today.year + 1, 3, 31)
-        else:
-            start_date = datetime.date(today.year - 1, 4, 1)
-            end_date = datetime.date(today.year, 3, 31)
-            
-        fy, created = FinancialYear.objects.get_or_create(
-            business=business,
-            start_date=start_date,
-            end_date=end_date,
-            defaults={'is_locked': False}
-        )
-        return fy
+        return LedgerCommonUtils.get_financial_year(business, datetime.date.today())
 
     @staticmethod
     def initialize_standard_coa(business):
@@ -412,7 +398,7 @@ class LedgerService:
         
         for acc in accounts:
             old_name = acc.name
-            new_name = AutomationService.normalize_ledger_name(old_name)
+            new_name = LedgerCommonUtils.normalize_ledger_name(old_name)
             
             if old_name != new_name:
                 acc.name = new_name

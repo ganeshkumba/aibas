@@ -52,7 +52,7 @@ class CFOService:
             'itc_count': Account.objects.filter(business=business, group__name='Duties & Taxes', name__icontains='Input').count(),
             'expense_count': Account.objects.filter(business=business, group__classification='EXPENSE').count(),
             'forensic_warnings': business.documents.filter(is_suspicious=True).count(),
-            'active_amortizations': business.amortization_schedules.filter(is_active=True).count(),
+            'active_amortizations': business.amortizationschedules.filter(is_active=True).count(),
             'health_checks': LedgerService.get_accounting_health_checks(business)
         }
 

@@ -1,86 +1,125 @@
 {% extends 'core/base.html' %}
 {% block content %}
 <style>
-  .inventory-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
-  .stock-alert { border-left: 4px solid #f43f5e !important; }
+    .inventory-header {
+        background: linear-gradient(135deg, #064e3b 0%, var(--bg-header) 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 6px;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid var(--border-default);
+        border-bottom: 4px solid var(--gh-green);
+    }
+
+    .inventory-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+    }
+
+    .stock-alert {
+        border-left: 4px solid var(--danger) !important;
+        background: rgba(248, 81, 73, 0.02);
+    }
+
+    .movement-item {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .movement-item:last-child {
+        border-bottom: none;
+    }
 </style>
 
-<div class="cfo-header" style="background: linear-gradient(135deg, #064e3b, #022c22); border-color: #065f46;">
-  <div>
-    <h1 style="margin: 0; font-weight: 800;">Virtual Warehouse & AI Stock Auditor</h1>
-    <div style="margin-top: 0.5rem; color: #a7f3d0; font-size: 0.9rem;">
-      Real-time inventory levels derived from AI purchase extraction
+<div class="inventory-header">
+    <div>
+        <h1 style="margin: 0; font-weight: 700; font-size: 1.75rem;">Inventory Hub</h1>
+        <div style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; font-family: var(--font-data);">
+            Real-time stock levels derived from AI-processed transactions
+        </div>
     </div>
-  </div>
-  <div style="display: flex; gap: 1rem;">
-     <div class="stat-card" style="padding: 0.75rem 1.5rem; background: rgba(0,0,0,0.2);">
-        <div class="stat-label" style="color: #a7f3d0;">Stock Value</div>
-        <div class="stat-value" style="font-size: 1.25rem;">₹{{ stats.total_value | floatformat:2 }}</div>
-     </div>
-  </div>
+    <div style="text-align: right;">
+        <div class="small" style="color: var(--text-secondary); font-weight: 800; text-transform: uppercase;">Stock Valuation</div>
+        <div style="font-size: 2.25rem; font-weight: 700; color: var(--gh-green); font-family: var(--font-data);">₹{{ stats.total_value|floatformat:2 }}</div>
+    </div>
 </div>
 
 <div class="inventory-grid">
-  <div class="entity-registry">
-    <div class="registry-header">
-      <h3 style="margin:0;">Product Catalog</h3>
-      <span class="badge badge-gold">{{ stats.item_count }} Items Tracked</span>
-    </div>
-    <table class="modern-table">
-      <thead>
-        <tr>
-          <th>Product Name</th>
-          <th>SKU / HSN</th>
-          <th>Current Stock</th>
-          <th>Value</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for product in products %}
-        <tr class="{% if product.current_stock <= product.low_stock_threshold %}stock-alert{% endif %}">
-          <td style="font-weight: 700;">{{ product.name }}</td>
-          <td style="font-family: 'JetBrains Mono'; font-size: 0.8rem;">{{ product.sku|default:"-" }}</td>
-          <td style="font-weight: 800; font-family: 'JetBrains Mono';">
-            {{ product.current_stock }} {{ product.uom }}
-          </td>
-          <td>₹{{ product.default_purchase_price }}</td>
-          <td>
-            {% if product.current_stock <= product.low_stock_threshold %}
-              <span style="color: #f43f5e; font-weight: 700;">LOW STOCK</span>
-            {% else %}
-              <span style="color: #10b981;">HEALTHY</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="5" style="text-align: center; padding: 3rem;">No products found. Upload a purchase invoice to start tracking.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="entity-registry">
-     <div class="registry-header">
-        <h3 style="margin:0;">Recent Movements</h3>
-     </div>
-     <div style="padding: 1rem;">
-        {% for move in movements %}
-        <div style="padding: 0.75rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <div style="font-weight: 700; font-size: 0.85rem;">{{ move.product.name }}</div>
-                <div style="font-size: 0.7rem; color: var(--text-secondary);">{{ move.date }} | {{ move.get_type_display }}</div>
-            </div>
-            <div style="font-family: 'JetBrains Mono'; font-weight: 800; color: {% if move.type == 'IN' %}#10b981{% else %}#f43f5e{% endif %};">
-                {% if move.type == 'IN' %}+{% else %}-{% endif %}{{ move.quantity }}
-            </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 style="margin: 0; font-size: 1rem;">Product Insight Catalog</h3>
+            <span class="tag tag-info">{{ stats.item_count }} Sku's Active</span>
         </div>
-        {% empty %}
-        <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">No movements yet.</div>
-        {% endfor %}
-     </div>
-  </div>
+        <div class="card-body" style="padding: 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Product</th>
+                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">SKU/HSN</th>
+                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Stock Level</th>
+                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Cost (Avg)</th>
+                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default); text-align: right;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr class="{% if product.current_stock <= product.low_stock_threshold %}stock-alert{% endif %}">
+                        <td style="padding: 1rem; font-weight: 600; color: white; border-bottom: 1px solid var(--border-muted);">{{ product.name }}</td>
+                        <td style="padding: 1rem; font-family: var(--font-data); font-size: 0.85rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-muted);">{{ product.sku|default:"-" }}</td>
+                        <td style="padding: 1rem; font-weight: 700; font-family: var(--font-data); color: var(--gh-blue); border-bottom: 1px solid var(--border-muted);">
+                            {{ product.current_stock }} {{ product.uom }}
+                        </td>
+                        <td style="padding: 1rem; font-family: var(--font-data); border-bottom: 1px solid var(--border-muted);">₹{{ product.default_purchase_price }}</td>
+                        <td style="padding: 1rem; text-align: right; border-bottom: 1px solid var(--border-muted);">
+                            {% if product.current_stock <= product.low_stock_threshold %}
+                                <span class="tag" style="background: rgba(248, 81, 73, 0.1); color: var(--danger); border-color: var(--danger);">CRITICAL</span>
+                            {% else %}
+                                <span class="tag tag-success">HEALTHY</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                            <div style="font-size: 2rem; margin-bottom: 1rem;">📦</div>
+                            No products found in the catalog.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 style="margin: 0; font-size: 1rem;">Audit Movement Log</h3>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% for move in movements %}
+                <div class="movement-item">
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9rem; color: white;">{{ move.product.name }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; font-family: var(--font-data);">{{ move.date }} | {{ move.get_type_display }}</div>
+                    </div>
+                    <div style="font-family: var(--font-data); font-weight: 700; color: {% if move.type == 'IN' %}var(--gh-green){% else %}var(--danger){% endif %};">
+                        {% if move.type == 'IN' %}+{% else %}-{% endif %}{{ move.quantity }}
+                    </div>
+                </div>
+            {% empty %}
+                <div style="text-align: center; color: var(--text-secondary); padding: 4rem;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚖️</div>
+                    No stock movements logged.
+                </div>
+            {% endfor %}
+        </div>
+    </div>
 </div>
 {% endblock %}

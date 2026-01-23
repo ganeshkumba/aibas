@@ -8,6 +8,8 @@ from core.models import Document, ExtractedLineItem, Business
 from apps.inventory.services.inventory_service import InventoryAutomationService
 
 
+from apps.ledger.services.utils import LedgerCommonUtils, MASTER_ALIAS
+
 logger = logging.getLogger(__name__)
 
 class AutomationService:
@@ -23,77 +25,13 @@ class AutomationService:
     }
 
     @staticmethod
-    def normalize_ledger_name(name):
-        """
-        SECTION 2.1: Naming Conventions Standardization
-        Ensures Proper Case, removes extra spaces, and standardizes terminology.
-        Includes "Self-Healing" for common typos.
-        """
-        if not name:
-            return "General Ledger"
-        
-        # 0. Common Typo Correction Map (Mistake 1.1 / 2.1)
-        typo_map = {
-            'COOUD': 'CLOUD',
-            'SHIPING': 'SHIPPING',
-            'COURIER / SHIPPING': 'COURIER/SHIPPING',
-            'OFFICE SUPPLIE': 'OFFICE SUPPLIES',
-            'STATIONARY': 'STATIONERY',
-            'CONSLTING': 'CONSULTING',
-            'ADVERTISMENT': 'ADVERTISEMENT',
-            'SUBSCRIPTON': 'SUBSCRIPTION',
-            'RECIEPT': 'RECEIPT'
-        }
-        
-        # Clean extra spaces and convert to upper for map check
-        clean_name = " ".join(name.split()).upper()
-        
-        # Apply typo corrections (Partial or Full)
-        for typo, correct in typo_map.items():
-            if typo in clean_name:
-                clean_name = clean_name.replace(typo, correct)
-        
-        # 1. Standardize separators (e.g. " / " -> "/")
-        clean_name = clean_name.replace(" / ", "/").replace(" - ", "-")
-        
-        # 2. Handle Proper Case but keep acronyms uppercase
-        uppercases = ['GST', 'TDS', 'AWS', 'UTR', 'IGST', 'CGST', 'SGST', 'ITC', 'PAN', 'MSME', 'HDFC', 'ICICI', 'SBI']
-        words = clean_name.split()
-        normalized_words = []
-        for word in words:
-            # Strip common punctuation for keyword check, but keep it in the name
-            punc_prefix = ""
-            punc_suffix = ""
-            while word and word[0] in '()[]/.-':
-                punc_prefix += word[0]
-                word = word[1:]
-            while word and word[-1] in '()[]/.-':
-                punc_suffix += word[-1]
-                word = word[:-1]
-                
-            clean_word = word.upper()
-            if clean_word in uppercases:
-                normalized_words.append(f"{punc_prefix}{word.upper()}{punc_suffix}")
-            else:
-                normalized_words.append(f"{punc_prefix}{word.capitalize()}{punc_suffix}")
-        
-        normalized_name = " ".join(normalized_words)
-        
-        # Consistency Check: Append 'Expense' if missing from common indirect accounts (Mistake 2.2)
-        if any(k in normalized_name.upper() for k in ['OFFICE SUPPLIES', 'SOFTWARE', 'CLOUD SUBSCRIPTION']) and 'EXPENSE' not in normalized_name.upper():
-             normalized_name += " Expense"
-             
-        return normalized_name.strip()
-
-    @staticmethod
     def get_or_create_default_account(business, name, group_name=None, voucher_type=None):
         """
-        Automated Ledger Provisioning Engine (SECTION 1 & 2)
+        Automated Ledger Provisioning Engine
         """
-        name = AutomationService.normalize_ledger_name(name)
+        name = LedgerCommonUtils.normalize_ledger_name(name)
         
         # 1. Self-Healing Search: If account exists in ANY group, reuse it
-        # This prevents "Same Account in Multiple Groups" (Mistake 2.3)
         existing = Account.objects.filter(business=business, name__iexact=name).first()
         if existing:
             return existing
@@ -156,27 +94,7 @@ class AutomationService:
             return None
 
         doc_date = document.document_date or (lines[0].date if lines.exists() else None) or datetime.date.today()
-        logger.info(f"Resolving Financial Year for date {doc_date}")
-        
-        fy = FinancialYear.objects.filter(
-            business=document.business, start_date__lte=doc_date, end_date__gte=doc_date
-        ).first()
-
-        if not fy:
-            logger.info("No active FY found, generating fallback FY.")
-            from datetime import date
-            if doc_date.month >= 4:
-                start_date = date(doc_date.year, 4, 1)
-                end_date = date(doc_date.year + 1, 3, 31)
-            else:
-                start_date = date(doc_date.year - 1, 4, 1)
-                end_date = date(doc_date.year, 3, 31)
-                
-            fy, _ = FinancialYear.objects.get_or_create(
-                business=document.business,
-                start_date=start_date,
-                end_date=end_date
-            )
+        fy = LedgerCommonUtils.get_financial_year(document.business, doc_date)
 
         if document.doc_type == 'bank':
             logger.info(f"Processing as Bank Statement for Doc {document.id}")
@@ -210,16 +128,6 @@ class AutomationService:
         """
         vouchers_created = []
         bank_account = cls.get_or_create_default_account(document.business, "Main Bank Account", "Bank Accounts")
-
-        # Master Alias System (Mapping common fragments to professional ledgers)
-        master_alias = {
-            'NARAYANA': 'Reliable Realty',
-            'RELIABLE': 'Reliable Realty',
-            'BANGALORE': 'Office Landlord',
-            'KARNATAKA': 'Office Landlord',
-            'AMAZON': 'Amazon Web Services',
-            'AWS': 'Amazon Web Services'
-        }
 
         for line in lines:
             # Determine direction: Debit = Payment, Credit = Receipt
@@ -300,10 +208,9 @@ class AutomationService:
 
             # 4. Alias / Map Fallbacks
             if not party_account:
-                for key, prof_name in master_alias.items():
-                    if key in desc_upper:
-                        party_account = cls.get_or_create_default_account(document.business, prof_name, 'Sundry Creditors', voucher_type=v_type)
-                        break
+                prof_name = LedgerCommonUtils.resolve_party_by_alias(desc_upper)
+                if prof_name:
+                    party_account = cls.get_or_create_default_account(document.business, prof_name, 'Sundry Creditors', voucher_type=v_type)
 
             if not party_account:
                 party_account = cls.get_or_create_default_account(
@@ -364,22 +271,8 @@ class AutomationService:
         biz_gstin = (document.business.gstin or "").upper()
         vendor_gstin = (lines[0].vendor_gstin or "").upper()
 
-        # Master Alias System (Rule 1)
-        master_alias = {
-            'NARAYANA': 'Reliable Realty',
-            'RELIABLE': 'Reliable Realty',
-            'BANGALORE': 'Office Landlord',
-            'KARNATAKA': 'Office Landlord',
-            'AMAZON': 'Amazon Web Services',
-            'AWS': 'Amazon Web Services'
-        }
-        
         v_date = document.document_date or datetime.date.today()
-        vendor_name = vendor_name_raw
-        for key, professional_name in master_alias.items():
-            if key in vendor_name_raw.upper():
-                vendor_name = professional_name
-                break
+        vendor_name = LedgerCommonUtils.resolve_party_by_alias(vendor_name_raw) or vendor_name_raw
         
         # 1. Transaction Direction (Purchase vs Sales)
         is_purchase = True

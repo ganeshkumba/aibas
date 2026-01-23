@@ -7,299 +7,395 @@
     <title>The Ledger | Enterprise Accounting</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Light Theme Variables */
-            --fb-blue: #3b5998;
-            --fb-bg: #f0f2f5;
-            --old-money-navy: #1a2a4b;
-            --old-money-cream: #f8f5f0;
-            --old-money-gold: #c5a059;
-            --text-main: #2d3436;
-            --text-secondary: #606770;
-            --border-classic: #dddfe2;
-            --card-background: #ffffff;
-            --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-            --sidebar-active-bg: #ffffff;
-            --btn-secondary-bg: #e4e6eb;
-            --btn-secondary-text: #050505;
-        }
-
-        [data-theme="dark"] {
-            /* Dark Theme Variables */
-            --fb-blue: #2d4373;
-            --fb-bg: #18191a;
-            --old-money-navy: #e4e6eb;
-            --old-money-cream: #242526;
-            --old-money-gold: #c5a059;
-            --text-main: #e4e6eb;
-            --text-secondary: #b0b3b8;
-            --border-classic: #3e4042;
-            --card-background: #242526;
-            --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-            --sidebar-active-bg: #3a3b3c;
-            --btn-secondary-bg: #3a3b3c;
-            --btn-secondary-text: #e4e6eb;
+            /* GitHub Dark Aesthetic */
+            --bg-canvas: #0d1117;
+            --bg-card: #161b22;
+            --bg-header: #010409;
+            --border-default: #30363d;
+            --border-muted: #21262d;
+            --text-main: #c9d1d9;
+            --text-secondary: #8b949e;
+            --gh-green: #238636;
+            --gh-green-hover: #2ea043;
+            --gh-blue: #58a6ff;
+            --gh-orange: #d16d0e;
+            --accent: #bc8cff;
+            --danger: #f85149;
+            
+            --font-ui: 'Space Grotesk', sans-serif;
+            --font-data: 'JetBrains Mono', monospace;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--fb-bg);
+            font-family: var(--font-ui);
+            background-color: var(--bg-canvas);
             color: var(--text-main);
             min-height: 100vh;
-            line-height: 1.6;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
 
+        /* Repository-Style Header */
         nav {
-            background-color: var(--fb-blue);
-            padding: 0.5rem 0;
-            display: flex;
-            justify-content: center;
+            background-color: var(--bg-header);
+            border-bottom: 1px solid var(--border-default);
+            padding: 1rem 0;
             position: sticky;
             top: 0;
             z-index: 1000;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .nav-container {
-            width: 100%;
-            max-width: 1200px;
-            padding: 0 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .logo {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.6rem;
-            font-weight: 900;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.25rem;
             color: white;
             text-decoration: none;
             letter-spacing: -0.5px;
         }
 
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-size: 1.2rem;
+        }
+
         .logo span {
-            font-size: 0.7rem;
-            font-family: 'Inter', sans-serif;
-            font-weight: 600;
-            vertical-align: middle;
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            font-size: 0.65rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--gh-blue);
             padding: 2px 8px;
-            border-radius: 4px;
-            margin-left: 10px;
+            border-radius: 20px;
+            border: 1px solid var(--gh-blue);
             text-transform: uppercase;
+            font-weight: 800;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 2rem auto;
-            padding: 0 1.5rem;
+            padding: 0 2rem;
             display: grid;
-            grid-template-columns: 240px 1fr;
-            gap: 2rem;
+            grid-template-columns: 280px 1fr;
+            gap: 2.5rem;
         }
 
+        /* GitHub Sidebar Navigation */
         .sidebar {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.25rem;
+        }
+
+        .sidebar-section {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            padding: 1rem 0.75rem 0.5rem;
+            font-weight: 600;
         }
 
         .sidebar a {
             text-decoration: none;
             color: var(--text-main);
             font-size: 0.9rem;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            transition: all 0.2s;
-            font-weight: 500;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 10px;
+            transition: background 0.1s;
         }
 
         .sidebar a:hover {
-            background: rgba(128, 128, 128, 0.1);
+            background-color: var(--bg-card);
         }
 
         .sidebar a.active {
-            background: var(--sidebar-active-bg);
-            font-weight: 700;
-            color: var(--fb-blue);
-            box-shadow: var(--card-shadow);
-            border: 1px solid var(--border-classic);
+            background-color: rgba(56, 139, 253, 0.1);
+            color: var(--gh-blue);
+            font-weight: 600;
+            border-left: 3px solid var(--gh-blue);
+            border-radius: 2px 6px 6px 2px;
         }
 
-        .sidebar-section {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            padding: 1rem 1rem 0.25rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+        .sidebar i { width: 16px; text-align: center; }
 
+        /* GitHub-style Cards & Layout */
         .main-content {
             min-width: 0;
         }
 
-        .btn {
-            background: var(--fb-blue);
-            color: white;
-            padding: 0.6rem 1.25rem;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-            display: inline-block;
-        }
-
-        .btn:hover {
-            filter: brightness(1.1);
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-            background: var(--btn-secondary-bg);
-            color: var(--btn-secondary-text);
-        }
-
-        .btn-secondary:hover {
-            filter: brightness(0.9);
-        }
-
         .card {
-            background: var(--card-background);
-            border: 1px solid var(--border-classic);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--card-shadow);
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 6px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background-color: var(--bg-header);
+            border-bottom: 1px solid var(--border-default);
+            padding: 0.75rem 1.25rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        /* Typography & Data */
+        h1, h2, h3 {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: white;
         }
 
         .ledger-number {
-            font-family: 'Inter', sans-serif;
-            font-variant-numeric: tabular-nums;
-            font-weight: 700;
+            font-family: var(--font-data);
+            font-size: 0.95rem;
+            color: var(--gh-blue);
         }
 
-        h1, h2, h3 {
-            font-family: 'Playfair Display', serif;
-            color: var(--old-money-navy);
-            margin-bottom: 1rem;
+        .currency {
+            font-family: var(--font-data);
+            font-weight: 500;
         }
 
+        /* Buttons matching GH Dark */
+        .btn {
+            background-color: var(--gh-green);
+            color: white;
+            padding: 5px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: 1px solid rgba(240, 246, 252, 0.1);
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--gh-green-hover);
+        }
+
+        .btn-secondary {
+            background-color: #21262d;
+            border: 1px solid var(--border-default);
+            color: var(--gh-blue);
+        }
+
+        .btn-secondary:hover {
+            background-color: #30363d;
+            border-color: #8b949e;
+        }
+
+        .btn-danger {
+            background-color: #21262d;
+            color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        /* Labels & Status Tags */
+        .tag {
+            font-family: var(--font-data);
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 2em;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .tag-info { 
+            background: rgba(56, 139, 253, 0.1); 
+            color: var(--gh-blue); 
+            border-color: rgba(56, 139, 253, 0.4);
+        }
+
+        .tag-success { 
+            background: rgba(35, 134, 54, 0.1); 
+            color: #3fb950; 
+            border-color: rgba(35, 134, 54, 0.4);
+        }
+
+        .tag-warning {
+            background: rgba(210, 153, 34, 0.1);
+            color: #d29922;
+            border-color: rgba(210, 153, 34, 0.4);
+        }
+
+        /* Nav Links */
         .nav-links {
             display: flex;
-            gap: 1.5rem;
+            gap: 1.25rem;
             align-items: center;
         }
 
         .nav-links a {
-            color: white;
+            color: var(--text-main);
             text-decoration: none;
             font-size: 0.9rem;
-            font-weight: 600;
-            opacity: 0.85;
-            transition: opacity 0.2s;
+            font-weight: 500;
         }
 
         .nav-links a:hover {
-            opacity: 1;
+            color: var(--gh-blue);
         }
 
-        .tag {
-            font-size: 0.65rem;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .tag-info { background: #e7f3ff; color: #1877f2; }
-        .tag-success { background: #e7f3ff; color: #1877f2; }
-
-        .small {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        #theme-toggle {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
+        /* Alerts Table-style */
+        .alert-gh {
+            background: rgba(56, 139, 253, 0.1);
+            border: 1px solid rgba(56, 139, 253, 0.4);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: var(--gh-blue);
             font-size: 0.9rem;
-            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-weight: 600;
+            gap: 12px;
+        }
+
+        .alert-gh::before {
+            content: '💡';
+        }
+
+        /* User Profile in Sidebar */
+        .user-pill {
+            padding: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--gh-orange);
+            color: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-family: var(--font-data);
         }
         
-        #theme-toggle:hover {
-            background: rgba(255, 255, 255, 0.2);
+        /* Monospace Table Fixes */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            text-align: left;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-default);
+            padding: 8px 12px;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-muted);
+            font-size: 0.9rem;
         }
 
-        [data-theme="dark"] .tag-info, [data-theme="dark"] .tag-success {
-            background: #1877f2;
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .repo-name {
+            color: var(--gh-blue);
+            font-weight: 600;
+            font-family: var(--font-data);
+        }
+
+        /* Forms & Inputs */
+        input[type="text"], input[type="email"], input[type="password"], textarea, select {
+            width: 100%;
+            background-color: var(--bg-canvas);
+            border: 1px solid var(--border-default);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: var(--font-data);
+            font-size: 0.9rem;
+            margin-top: 5px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--gh-blue);
+            box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.3);
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
             color: white;
+            display: block;
         }
     </style>
-    <script>
-        // Theme Management Script
-        const setTheme = (theme) => {
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-            const toggleIcon = document.getElementById('theme-icon');
-            const toggleText = document.getElementById('theme-text');
-            if (toggleIcon && toggleText) {
-                toggleIcon.innerText = theme === 'dark' ? '🌙' : '☀️';
-                toggleText.innerText = theme === 'dark' ? 'Dark' : 'Light';
-            }
-        };
-
-        const toggleTheme = () => {
-            const currentTheme = localStorage.getItem('theme') || 'light';
-            setTheme(currentTheme === 'light' ? 'dark' : 'light');
-        };
-
-        // Initialize theme on load
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            setTheme(savedTheme);
-        });
-    </script>
 </head>
 
 <body>
     <nav>
         <div class="nav-container">
-            <a href="{% url 'core:index' %}" class="logo">The Ledger <span>Est. 2024</span></a>
+            <a href="{% url 'core:index' %}" class="logo">
+                <div class="logo-icon">L</div>
+                The Ledger <span>Pro-Mode</span>
+            </a>
             <div class="nav-links">
-                <button id="theme-toggle" onclick="toggleTheme()">
-                    <span id="theme-icon">☀️</span>
-                    <span id="theme-text">Light</span>
-                </button>
                 {% if user.is_authenticated %}
-                    <a href="{% url 'core:index' %}">News Feed</a>
+                    <a href="{% url 'core:index' %}">Timeline</a>
+                    <a href="#">Audit Logs</a>
                     <form action="{% url 'core:logout' %}" method="post" style="display: inline;">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.75rem;">Logout</button>
+                        <button type="submit" class="btn btn-secondary" style="padding: 3px 12px; font-size: 0.8rem;">Sign Out</button>
                     </form>
                 {% else %}
                     <a href="{% url 'core:login' %}">Log In</a>
@@ -312,68 +408,67 @@
     <div class="container">
         <div class="sidebar">
             {% if user.is_authenticated %}
-                <div style="padding: 0.5rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; background: white; border-radius: 12px; border: 1px solid var(--border-classic);">
-                    <div style="width: 36px; height: 36px; background: var(--fb-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-family: 'Playfair Display'; font-size: 1.2rem;">
+                <div class="user-pill">
+                    <div class="user-avatar">
                         {{ user.email | slice:":1" | upper }}
                     </div>
                     <div style="overflow: hidden;">
-                        <div class="small" style="font-weight: 800; color: #1c1e21; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             {{ user.email }}
                         </div>
-                        <div style="font-size: 0.6rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Account Active</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); font-family: var(--font-data);">Verified Accountant</div>
                     </div>
                 </div>
 
                 <a href="{% url 'core:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
-                    <span>🏠</span> Home Feed
+                    <i>🏠</i> Home
                 </a>
 
                 {% if business %}
-                    <div class="sidebar-section">{{ business.name | truncatechars:20 }}</div>
+                    <div class="sidebar-section">Repository: <span class="repo-name">{{ business.name | truncatechars:15 }}</span></div>
                     <a href="{% url 'core:business_detail' business.id %}" class="{% if request.resolver_match.url_name == 'business_detail' %}active{% endif %}">
-                        <span>📊</span> Business Hub
+                        <i>📊</i> Business Hub
                     </a>
                     <a href="{% url 'core:upload_document' business.id %}" class="{% if request.resolver_match.url_name == 'upload_document' %}active{% endif %}">
-                        <span>📤</span> Upload Entry
+                        <i>📤</i> Upload Entry
                     </a>
                     <a href="{% url 'core:documents_list' business.id %}" class="{% if request.resolver_match.url_name == 'documents_list' %}active{% endif %}">
-                        <span>📂</span> Audit Vault
+                        <i>📂</i> Audit Vault
                     </a>
 
-                    <div class="sidebar-section">Accounting Module</div>
-                    <a href="{% url 'ledger:day-book' business.id %}"><span>📓</span> Day Book</a>
-                    <a href="{% url 'ledger:trial-balance' business.id %}"><span>⚖️</span> Trial Balance</a>
-                    <a href="{% url 'ledger:profit-loss' business.id %}"><span>📈</span> Profit & Loss</a>
-                    <a href="{% url 'ledger:balance-sheet' business.id %}"><span>📉</span> Balance Sheet</a>
+                    <div class="sidebar-section">Financial Controls</div>
+                    <a href="{% url 'ledger:day-book' business.id %}"><i>📓</i> Day Book</a>
+                    <a href="{% url 'ledger:trial-balance' business.id %}"><i>⚖️</i> Trial Balance</a>
+                    <a href="{% url 'ledger:profit-loss' business.id %}"><i>📈</i> Profit & Loss</a>
+                    <a href="{% url 'ledger:balance-sheet' business.id %}"><i>📉</i> Balance Sheet</a>
                     
                     <div class="sidebar-section">God-Mode Access</div>
                     <a href="{% url 'ledger:forensic-dashboard' business.id %}" class="{% if request.resolver_match.url_name == 'forensic-dashboard' %}active{% endif %}">
-                        <span>🕵️</span> Forensic Shield
+                        <i>🕵️</i> Forensic Shield
                     </a>
                     <a href="{% url 'ledger:amortization-tracker' business.id %}" class="{% if request.resolver_match.url_name == 'amortization-tracker' %}active{% endif %}">
-                        <span>📅</span> Amortization
+                        <i>📅</i> Amortization
                     </a>
                     <a href="{% url 'ledger:intercompany-tower' business.id %}" class="{% if request.resolver_match.url_name == 'intercompany-tower' %}active{% endif %}">
-                        <span>🌐</span> Group Sync
+                        <i>🌐</i> Group Sync
                     </a>
                     <a href="{% url 'ledger:security-audit' business.id %}" class="{% if request.resolver_match.url_name == 'security-audit' %}active{% endif %}">
-                        <span>🛡️</span> Security & Perf
+                        <i>🛡️</i> Security & Perf
                     </a>
                 {% else %}
-                    <a href="{% url 'core:business_create' %}"><span>➕</span> Register Business</a>
+                    <a href="{% url 'core:business_create' %}" class="btn"><i>➕</i> Register Business</a>
                 {% endif %}
 
-                <hr style="border: 0; border-top: 1px solid var(--border-classic); margin: 1.5rem 0;">
-                <div class="sidebar-section">Control Panel</div>
-                <a href="#"><span>👤</span> Profile Settings</a>
-                <a href="#"><span>⚙️</span> API Config</a>
+                <div class="sidebar-section">Settings</div>
+                <a href="#"><i>👤</i> Profile</a>
+                <a href="#"><i>⚙️</i> API Config</a>
             {% endif %}
         </div>
 
         <div class="main-content">
             {% if messages %}
                 {% for message in messages %}
-                    <div class="card" style="border-left: 4px solid var(--old-money-gold); padding: 1rem 1.5rem; margin-bottom: 1.5rem; background: #fffdf9; font-weight: 500;">
+                    <div class="alert-gh">
                         {{ message }}
                     </div>
                 {% endfor %}
