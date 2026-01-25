@@ -1,54 +1,70 @@
 {% extends 'core/base.html' %}
 
+{% block title %}Register Enterprise | The Ledger{% endblock %}
+
 {% block content %}
-<div class="card" style="max-width: 480px; margin: 3rem auto;">
-  <div class="card-header" style="justify-content: center; padding: 1.5rem;">
-    <h2 style="font-size: 1.25rem;">Create your account</h2>
-  </div>
-
-  <div class="card-body" style="padding: 2rem;">
-    <form method="post">
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-        <div class="alert-gh" style="background: rgba(248, 81, 73, 0.1); border-color: rgba(248, 81, 73, 0.4); color: var(--danger); margin-bottom: 2rem;">
-            {{ form.non_field_errors }}
-        </div>
-        {% endif %}
-
-        <div style="margin-bottom: 1.5rem;">
-            <label>Full Name</label>
-            {{ form.full_name }}
-            <div style="color: var(--danger); font-size: 0.75rem; margin-top: 4px;">{{ form.full_name.errors }}</div>
-        </div>
-
-        <div style="margin-bottom: 1.5rem;">
-            <label>Email address</label>
-            {{ form.email }}
-            <div style="color: var(--danger); font-size: 0.75rem; margin-top: 4px;">{{ form.email.errors }}</div>
-        </div>
-
-        {% for field in form %}
-          {% if field.name == 'password1' or field.name == 'password2' %}
-            <div style="margin-bottom: 1.5rem;">
-                <label>{{ field.label }}</label>
-                {{ field }}
-                <div style="color: var(--danger); font-size: 0.75rem; margin-top: 4px;">{{ field.errors }}</div>
+<div class="h-full flex items-center justify-center p-4">
+    <div class="w-full max-w-[420px] space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
+        <!-- Compact Header -->
+        <div class="flex flex-col items-center gap-3 text-center">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-black text-xl shadow-lg">
+                L
             </div>
-          {% endif %}
-        {% endfor %}
+            <div class="space-y-0.5">
+                <h2 class="text-xl font-bold tracking-tight">Enterprise Identity</h2>
+                <p class="text-[9px] text-muted-foreground uppercase tracking-widest font-black text-center">Initialize Crypto-Governed Account</p>
+            </div>
+        </div>
 
-        <button type="submit" class="btn" style="width: 100%; justify-content: center; padding: 10px; margin-top: 1rem;">Create account</button>
-        
-        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 1.5rem; text-align: center;">
-            By creating an account, you agree to the Terms of Service and Privacy Policy.
-        </p>
-    </form>
-  </div>
+        <div class="rounded-lg border bg-card text-card-foreground shadow-2xl overflow-hidden">
+            <div class="p-6">
+                <form method="post" class="space-y-3">
+                    {% csrf_token %}
 
-  <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem; border: 1px solid var(--border-default); border-radius: 6px; padding: 1.25rem;">
-    Already have an account? 
-    <a href="{% url 'core:login' %}" style="color: var(--gh-blue); text-decoration: none;">Sign in</a>.
-  </div>
+                    {% for field in form %}
+                    <div class="space-y-1">
+                        <label class="text-[9px] font-black uppercase tracking-tight text-muted-foreground">
+                            {{ field.label }}
+                        </label>
+                        <div class="relative group">
+                            <i data-lucide="{% if 'pass' in field.id_for_label %}lock{% elif 'user' in field.id_for_label or 'email' in field.id_for_label %}mail{% else %}user{% endif %}" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors"></i>
+                            {{ field }}
+                        </div>
+                        {% if field.errors %}
+                            <p class="text-[9px] font-bold text-rose-500 uppercase tracking-tighter">{{ field.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <button type="submit" class="inline-flex items-center justify-center rounded-md text-xs font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-full mt-3 shadow-lg active:scale-95 transition-all">
+                        Register Enterprise
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center gap-3">
+            <div class="text-center rounded-lg border bg-card/50 p-2.5 w-full border-dashed">
+                <span class="text-[9px] text-muted-foreground uppercase font-medium">Existing Member?</span>
+                <a href="{% url 'core:login' %}" class="ml-1 text-[9px] font-black text-blue-400 hover:underline tracking-tight">Sign In to Session</a>
+            </div>
+            
+            <p class="text-[8px] text-muted-foreground font-mono text-center leading-tight opacity-60">
+                Initializes RSA-2048 identity for secure cryptographic verification.
+            </p>
+        </div>
+    </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.type !== 'checkbox' && input.type !== 'radio' && input.type !== 'submit') {
+                input.className = 'flex h-9 w-full rounded-md border border-input bg-background px-8 py-1.5 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+            }
+        });
+        lucide.createIcons();
+    });
+</script>
 {% endblock %}

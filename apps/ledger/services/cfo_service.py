@@ -10,6 +10,66 @@ class CFOService:
     """
 
     @staticmethod
+    def get_time_series_data(business):
+        """
+        Calculates weekly inflow and outflow for the last 6 weeks.
+        """
+        import datetime
+        from django.db.models.functions import TruncWeek
+        
+        today = datetime.date.today()
+        six_weeks_ago = today - datetime.timedelta(weeks=6)
+        
+        # Aggregate Inflow (Income Credit - Income Debit)
+        inflow = JournalEntry.objects.filter(
+            account__business=business,
+            account__group__classification='INCOME',
+            voucher__date__gte=six_weeks_ago
+        ).annotate(week=TruncWeek('voucher__date')).values('week').annotate(
+            total=Sum('credit') - Sum('debit')
+        ).order_by('week')
+        
+        # Aggregate Outflow (Expense Debit - Expense Credit)
+        outflow = JournalEntry.objects.filter(
+            account__business=business,
+            account__group__classification='EXPENSE',
+            voucher__date__gte=six_weeks_ago
+        ).annotate(week=TruncWeek('voucher__date')).values('week').annotate(
+            total=Sum('debit') - Sum('credit')
+        ).order_by('week')
+        
+        # Align data into arrays
+        labels = []
+        inflow_data = []
+        outflow_data = []
+        
+        # Generate last 6 weeks labels
+        week_map = {}
+        for i in range(5, -1, -1):
+            w = (today - datetime.timedelta(weeks=i)).isocalendar()[1]
+            labels.append(f"Week {w}")
+            week_start = (today - datetime.timedelta(weeks=i)) - datetime.timedelta(days=(today - datetime.timedelta(weeks=i)).weekday())
+            week_map[week_start] = len(labels) - 1
+            inflow_data.append(0)
+            outflow_data.append(0)
+            
+        for entry in inflow:
+            idx = week_map.get(entry['week'].date())
+            if idx is not None:
+                inflow_data[idx] = float(entry['total'] or 0)
+                
+        for entry in outflow:
+            idx = week_map.get(entry['week'].date())
+            if idx is not None:
+                outflow_data[idx] = float(entry['total'] or 0)
+                
+        return {
+            'labels': labels,
+            'inflow': inflow_data,
+            'outflow': outflow_data
+        }
+
+    @staticmethod
     def get_executive_summary(business):
         """
         Generates the mission-critical financial summary.

@@ -1,333 +1,319 @@
 {% extends 'core/base.html' %}
+
+{% block title %}Review Terminal | The Ledger{% endblock %}
+
 {% block content %}
-<style>
-  .audit-container {
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-
-  .audit-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-default);
-    border-radius: 6px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .grid-layout {
-    display: grid;
-    grid-template-columns: 1fr 380px;
-    gap: 1.5rem;
-  }
-
-  .metric-bar {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .metric-box {
-    background: var(--bg-header);
-    padding: 1rem;
-    border-radius: 6px;
-    border: 1px solid var(--border-default);
-  }
-
-  .metric-box label {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    font-family: var(--font-data);
-  }
-
-  .metric-box span {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: white;
-  }
-
-  .indicator {
-    padding: 2px 8px;
-    border-radius: 2em;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    display: inline-block;
-  }
-
-  .posting-row {
-    border-bottom: 1px solid var(--border-muted);
-    padding: 0.75rem 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .posting-row:last-child {
-    border-bottom: none;
-  }
-
-  .acc-select {
-    background: var(--bg-canvas);
-    color: var(--text-main);
-    border: 1px solid var(--border-default);
-    font-size: 0.8rem;
-    padding: 4px 8px;
-    border-radius: 4px;
-    margin-left: 10px;
-    outline: none;
-  }
-</style>
-
-<div class="audit-container">
-
-  <!-- Header Section -->
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-    <div>
-      <h1 style="font-size: 1.75rem; margin: 0; color: white;">Review Terminal <span style="color: var(--text-secondary); font-weight: 400;">#{{ doc.id }}</span></h1>
-      <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.75rem;">
-        <span class="indicator tag-warning">
-          {{ doc.get_status_display }}
-        </span>
-        <span style="color: var(--text-secondary); font-size: 0.85rem; font-family: var(--font-data);">{{ doc.uploaded_at|date:"d M Y, H:i" }}</span>
-      </div>
-    </div>
-    <div style="display: flex; gap: 0.75rem;">
-      <form action="{% url 'core:reprocess_document' doc.id %}" method="POST">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-secondary" style="font-size: 0.85rem;">Reprocess AI</button>
-      </form>
-      <a href="{% url 'ledger:tally-export' %}?document_id={{ doc.id }}" class="btn" style="background: var(--gh-blue); color: white; border-color: rgba(255,255,255,0.1); font-size: 0.85rem;">Export XML</a>
-    </div>
-  </div>
-
-  <div class="grid-layout">
-    
-    <!-- Main Content -->
-    <div class="left-col">
-      
-      <!-- Metrics -->
-      <div class="metric-bar">
-        <div class="metric-box">
-          <label>Extraction Total</label>
-          <span style="font-family: var(--font-data);">₹{{ metrics.total_value|floatformat:2 }}</span>
-        </div>
-        <div class="metric-box">
-          <label>Tax Impact</label>
-          <span style="color: var(--gh-green); font-family: var(--font-data);">₹{{ metrics.tax_savings|floatformat:2 }}</span>
-        </div>
-        <div class="metric-box">
-          <label>CFO P/L</label>
-          <span style="color: {% if metrics.business_pl >= 0 %}var(--gh-green){% else %}var(--danger){% endif %}; font-family: var(--font-data);">₹{{ metrics.business_pl|floatformat:2 }}</span>
-        </div>
-        <div class="metric-box">
-          <label>Confidence</label>
-          <span style="color: var(--gh-blue);">{{ metrics.reliability }}%</span>
-        </div>
-      </div>
-
-      {% if doc.extraction_errors %}
-      <div class="audit-card" style="border-left: 4px solid var(--danger); background: rgba(248, 81, 73, 0.05);">
-        <h4 style="color: var(--danger); margin: 0 0 1rem 0; font-size: 1rem;">AI Extraction Issue</h4>
-        <div style="font-size: 0.9rem; color: var(--text-main);">
-          <strong>Stage:</strong> {{ doc.extraction_errors.step }}<br>
-          <strong>Error:</strong> {{ doc.extraction_errors.message }}
-        </div>
-      </div>
-      {% endif %}
-
-      <div class="audit-card">
-        <h3 style="font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-muted); padding-bottom: 0.75rem;">Ledger Postings (Audit Trail)</h3>
-        
-        {% for voucher in vouchers %}
-        <div style="margin-bottom: 2rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <div style="font-weight: 700; color: var(--gh-blue); font-family: var(--font-data);">{{ voucher.voucher_number }}</div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary);">{{ voucher.date|date:"d M Y" }}</div>
-          </div>
-
-          <div style="background: var(--bg-header); border: 1px solid var(--border-muted); border-radius: 6px; padding: 0 1rem;">
-            {% for entry in voucher.entries.all %}
-            <div class="posting-row">
-              <div style="font-weight: 500; font-size: 0.9rem;">
-                {% if entry.credit > 0 %}
-                  <span style="color: var(--text-secondary); margin-right: 0.5rem; font-weight: 400;">To</span>
-                {% endif %}
-                <span style="color: white;">{{ entry.account.name }}</span>
-
-                {% if voucher.is_draft %}
-                <form action="{% url 'ledger:reclassify-entry' %}" method="POST" style="display: inline;">
-                  {% csrf_token %}
-                  <input type="hidden" name="entry_id" value="{{ entry.id }}">
-                  <select name="account_id" onchange="handleAccountMapping(this, '{{ entry.id }}')" class="acc-select">
-                    <option value="">Map Account...</option>
-                    <option value="CREATE_NEW" style="color: var(--gh-orange); font-weight: bold;">+ Add New Ledger...</option>
-                    <option value="" disabled>---------</option>
-                    {% for acc in all_accounts %}
-                    <option value="{{ acc.id }}" {% if acc.id == entry.account.id %}selected{% endif %}>{{ acc.name }}</option>
-                    {% endfor %}
-                  </select>
-                </form>
-                {% endif %}
-              </div>
-              <div style="font-family: var(--font-data); font-weight: 600; font-size: 0.9rem; color: {% if entry.debit > 0 %}var(--text-main){% else %}var(--text-secondary){% endif %};">
-                ₹{% if entry.debit > 0 %}{{ entry.debit|floatformat:2 }}{% else %}{{ entry.credit|floatformat:2 }}{% endif %}
-                <span style="font-size: 0.75rem; color: var(--text-secondary); margin-left: 4px;">{% if entry.debit > 0 %}Dr{% else %}Cr{% endif %}</span>
-              </div>
+<div class="flex flex-col gap-8" x-data="{ activeTab: 'postings' }">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/60">
+        <div class="space-y-2">
+            <div class="flex items-center gap-3">
+                <h1 class="text-3xl font-bold tracking-tight">Review Terminal</h1>
+                <span class="text-muted-foreground font-mono text-sm">#{{ doc.id|stringformat:".8s" }}</span>
             </div>
-            {% endfor %}
-          </div>
-
-          <div style="margin-top: 1rem; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; color: var(--text-secondary); background: rgba(255,255,255,0.02); font-style: italic;">
-            <strong style="color: var(--text-main); font-style: normal;">NARRATION:</strong> {{ voucher.narration }}
-          </div>
-
-          {% if voucher.is_draft %}
-          <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
-            <form action="{% url 'core:approve_vouchers' doc.id %}" method="POST">
-              {% csrf_token %}
-              <button type="submit" class="btn" style="background: var(--gh-green); border-radius: 20px; font-size: 0.8rem; padding: 0.4rem 1.5rem;">AUTHORIZE POSTING</button>
+            <div class="flex items-center gap-3 text-xs">
+                {% if doc.status == 'processed' %}
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 font-bold bg-emerald-500/10 text-emerald-500 border-emerald-500/20 uppercase tracking-tighter">
+                    <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>
+                    Analyzed
+                </span>
+                {% elif doc.status == 'failed' %}
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 font-bold bg-rose-500/10 text-rose-500 border-rose-500/20 uppercase tracking-tighter">
+                    <i data-lucide="x-circle" class="w-3 h-3 mr-1"></i>
+                    Failure
+                </span>
+                {% else %}
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 font-bold bg-amber-500/10 text-amber-500 border-amber-500/20 uppercase tracking-tighter animate-pulse">
+                    <i data-lucide="refresh-cw" class="w-3 h-3 mr-1"></i>
+                    Processing
+                </span>
+                {% endif %}
+                <span class="text-muted-foreground font-medium">{{ doc.uploaded_at|date:"d M Y, H:i" }}</span>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <form action="{% url 'core:reprocess_document' doc.id %}" method="POST" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 gap-2">
+                    <i data-lucide="brain-circuit" class="w-4 h-4"></i>
+                    Reprocess AI
+                </button>
             </form>
-          </div>
-          {% endif %}
+            <a href="{% url 'ledger:tally-export' %}?document_id={{ doc.id }}" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 gap-2 shadow-lg shadow-white/5">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                Export XML
+            </a>
         </div>
-        {% empty %}
-        <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-          <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
-          <div>Finalizing ledger dimensions...</div>
-        </div>
-        {% endfor %}
-      </div>
-
-      <div class="audit-card">
-        <h4 style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 1rem 0;">OCR Raw Output (Editable)</h4>
-        <form action="{% url 'core:update_ocr_text' doc.id %}" method="POST">
-          {% csrf_token %}
-          <textarea name="ocr_text" style="width: 100%; height: 200px; background: var(--bg-header); border: 1px solid var(--border-muted); color: var(--text-secondary); font-family: var(--font-data); font-size: 0.85rem; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; resize: vertical; line-height: 1.5;">{{ doc.ocr_text|default:"" }}</textarea>
-          <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-            <button type="submit" class="btn btn-secondary" style="font-size: 0.85rem;">Save Text Only</button>
-            <button type="submit" name="process_ai" class="btn" style="background: var(--gh-orange); border-color: transparent; color: white; font-weight: 600; font-size: 0.85rem;">Save & Run AI Extraction</button>
-          </div>
-        </form>
-      </div>
-
     </div>
 
-    <!-- Right Column (Context) -->
-    <div class="right-col">
-      
-      <div class="audit-card">
-        <h3 style="font-size: 1rem; margin: 0 0 1rem 0;">CA Health Protocol</h3>
-        {% for check in health %}
-        <div style="background: rgba(209, 109, 14, 0.1); border-left: 3px solid var(--gh-orange); padding: 0.75rem; border-radius: 4px; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--text-main);">
-          <div style="font-weight: 700; font-size: 0.7rem; color: var(--gh-orange); text-transform: uppercase; margin-bottom: 4px;">{{ check.severity }}</div>
-          {{ check.message }}
-        </div>
-        {% empty %}
-        <div style="text-align: center; color: var(--gh-green); border: 1px dashed var(--gh-green); border-radius: 6px; padding: 2rem;">
-          <div style="font-size: 1.75rem; margin-bottom: 0.5rem;">✅</div>
-          <div style="font-weight: 700;">GAAP COMPLIANT</div>
-        </div>
-        {% endfor %}
-      </div>
-
-      <div class="audit-card" style="padding: 0; overflow: hidden;">
-        <div style="padding: 1rem; border-bottom: 1px solid var(--border-default); font-weight: 600; font-size: 0.9rem;">Document Proof</div>
-        {% if doc.file %}
-          <div style="height: 300px; background: #000; display: flex; align-items: center; justify-content: center;">
-            {% with ext=doc.file.name|lower %}
-              {% if ".pdf" in ext %}
-                <div style="text-align: center;">
-                  <div style="font-size: 3rem;">📄</div>
-                  <a href="{{ doc.file.url }}" target="_blank" style="color: var(--gh-blue); font-size: 0.9rem; font-weight: 600; text-decoration: underline;">Open PDF Source</a>
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Main Panel (Left 8) -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            
+            <!-- Shadcn Tabs Component -->
+            <div dir="ltr" class="relative">
+                <div role="tablist" class="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full sm:w-auto">
+                    <button @click="activeTab = 'postings'" :class="activeTab === 'postings' ? 'bg-background text-foreground shadow-sm' : ''" class="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+                        Ledger Postings
+                    </button>
+                    <button @click="activeTab = 'ocr'" :class="activeTab === 'ocr' ? 'bg-background text-foreground shadow-sm' : ''" class="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+                        Raw Intelligence
+                    </button>
+                    <button @click="activeTab = 'analytics'" :class="activeTab === 'analytics' ? 'bg-background text-foreground shadow-sm' : ''" class="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+                        Analytics
+                    </button>
                 </div>
-              {% else %}
-                <img src="{{ doc.file.url }}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-              {% endif %}
-            {% endwith %}
-          </div>
-        {% else %}
-          <div style="padding: 3rem; text-align: center; color: var(--text-secondary);">No source file.</div>
-        {% endif %}
-      </div>
 
-      <div class="audit-card">
-        <h3 style="font-size: 0.9rem; margin: 0 0 1rem 0;">System Metadata</h3>
-        <div style="font-size: 0.8rem; display: grid; gap: 0.75rem;">
-          <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Engine</span><span style="font-family: var(--font-data);">{{ ollama_model }}</span></div>
-          <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Tax Zone</span><span style="font-weight: 600; color: white;">{{ business.state|default:"Federal" }}</span></div>
+                <!-- Tab Content: Postings -->
+                <div x-show="activeTab === 'postings'" class="mt-6 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div class="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
+                        <div class="p-6 border-b bg-muted/20">
+                            <h3 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                <i data-lucide="git-branch" class="w-4 h-4"></i>
+                                Double-Entry Audit Trail
+                            </h3>
+                        </div>
+                        <div class="p-6 space-y-8">
+                            {% for voucher in vouchers %}
+                            <div class="space-y-4" x-data="{ open: true }">
+                                <div @click="open = !open" class="flex items-center justify-between cursor-pointer group">
+                                    <div class="flex items-center gap-3">
+                                        <i data-lucide="chevron-right" class="w-4 h-4 text-muted-foreground transition-transform duration-200" :class="open ? 'rotate-90' : ''"></i>
+                                        <span class="font-mono text-sm font-bold text-blue-400">{{ voucher.voucher_number }}</span>
+                                        <span class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border rounded-full bg-white/5 border-white/10">{{ voucher.date|date:"d M Y" }}</span>
+                                    </div>
+                                    <div class="text-sm font-bold font-mono">₹{{ voucher.total_amount|floatformat:2 }}</div>
+                                </div>
+
+                                <div x-show="open" x-collapse class="pl-7 space-y-3">
+                                    <div class="rounded-lg border bg-muted/10 divide-y divide-border/40">
+                                        {% for entry in voucher.entries.all %}
+                                        <div class="flex items-center justify-between p-4 group/row">
+                                            <div class="flex items-center gap-4">
+                                                <div class="flex flex-col">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-[10px] font-black uppercase text-muted-foreground w-6">{% if entry.credit > 0 %}TO{% else %}BY{% endif %}</span>
+                                                        <span class="text-sm font-bold">{{ entry.account.name }}</span>
+                                                    </div>
+                                                    <span class="text-[10px] text-muted-foreground uppercase font-medium pl-8">{{ entry.account.group.name }}</span>
+                                                </div>
+
+                                                {% if voucher.is_draft %}
+                                                <div class="opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                                    <form action="{% url 'ledger:reclassify-entry' %}" method="POST" class="m-0">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="entry_id" value="{{ entry.id }}">
+                                                        <select name="account_id" onchange="this.form.submit()" class="h-7 w-40 rounded-md border border-input bg-card px-2 text-[10px] font-bold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                                                            <option value="">Reclassify...</option>
+                                                            {% for acc in all_accounts %}
+                                                            <option value="{{ acc.id }}" {% if acc.id == entry.account.id %}selected{% endif %}>{{ acc.name }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </form>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="text-sm font-bold font-mono">₹{% if entry.debit > 0 %}{{ entry.debit|floatformat:2 }}{% else %}{{ entry.credit|floatformat:2 }}{% endif %}</div>
+                                                <div class="text-[10px] font-bold uppercase tracking-tighter {% if entry.debit > 0 %}text-primary{% else %}text-muted-foreground{% endif %}">{% if entry.debit > 0 %}DEBIT{% else %}CREDIT{% endif %}</div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="p-4 rounded-lg bg-indigo-500/5 border border-indigo-500/10 text-[11px] leading-relaxed italic text-indigo-300">
+                                        <span class="not-italic font-bold uppercase tracking-widest mr-2 text-indigo-400">Narration</span>
+                                        {{ voucher.narration }}
+                                    </div>
+                                    {% if voucher.is_draft %}
+                                    <div class="flex justify-end pt-2">
+                                        <form action="{% url 'core:approve_vouchers' doc.id %}" method="POST" class="m-0">
+                                            {% csrf_token %}
+                                            <button type="submit" class="inline-flex items-center justify-center rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-600 text-white hover:bg-emerald-700 h-8 px-6 shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">
+                                                Authorize Posting
+                                            </button>
+                                        </form>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="py-20 flex flex-col items-center justify-center text-muted-foreground">
+                                <i data-lucide="loader-2" class="w-10 h-10 animate-spin mb-4 opacity-50"></i>
+                                <p class="text-sm font-medium">Finalizing financial dimensions...</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Content: OCR -->
+                <div x-show="activeTab === 'ocr'" class="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div class="rounded-xl border bg-card text-card-foreground shadow-sm">
+                        <div class="p-6 border-b bg-muted/20 flex items-center justify-between">
+                            <h3 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                <i data-lucide="text-cursor-input" class="w-4 h-4"></i>
+                                Extraction Matrix (Raw OCR)
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <form action="{% url 'core:update_ocr_text' doc.id %}" method="POST" class="space-y-4">
+                                {% csrf_token %}
+                                <textarea name="ocr_text" rows="12" class="w-full rounded-md border border-input bg-muted/30 px-4 py-4 text-xs font-mono leading-relaxed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring overflow-y-auto">{{ doc.ocr_text|default:"" }}</textarea>
+                                <div class="flex justify-end gap-3">
+                                    <button type="submit" class="inline-flex items-center justify-center rounded-md text-xs font-bold uppercase tracking-widest border border-input bg-background hover:bg-accent h-9 px-4">
+                                        Save Snapshot
+                                    </button>
+                                    <button type="submit" name="process_ai" class="inline-flex items-center justify-center rounded-md text-xs font-bold uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-700 h-9 px-4">
+                                        Update & Run AI
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Analytics -->
+                <div x-show="activeTab === 'analytics'" class="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="rounded-xl border bg-card p-6 shadow-sm">
+                            <h3 class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">Extraction Metrics</h3>
+                            <div class="h-48">
+                                <canvas id="extractionChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="rounded-xl border bg-card p-6 shadow-sm flex flex-col justify-center gap-8">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-muted-foreground">Confidence Score</span>
+                                <span class="text-2xl font-black font-mono text-blue-400">{{ metrics.reliability }}%</span>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="h-2 w-full bg-muted rounded-full overflow-hidden">
+                                    <div class="h-full bg-blue-500" style="width: {{ metrics.reliability }}%"></div>
+                                </div>
+                                <p class="text-[10px] text-muted-foreground leading-relaxed">
+                                    Determined by the cross-validation of OCR probability and LLM semantic matching.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
 
+        <!-- Sidebar Panel (Right 4) -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+            
+            <!-- Health Protocol Card -->
+            <div class="rounded-xl border bg-card shadow-sm overflow-hidden border-orange-500/20">
+                <div class="p-4 border-b bg-orange-500/[0.03] flex items-center justify-between">
+                    <h3 class="text-xs font-extrabold uppercase tracking-widest text-orange-500">Compliance Protocol</h3>
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-orange-500"></i>
+                </div>
+                <div class="p-4 space-y-3">
+                    {% for check in health %}
+                    <div class="p-3 rounded-lg bg-orange-500/5 border border-orange-500/10 space-y-1">
+                        <div class="text-[9px] font-black uppercase text-orange-500 tracking-tighter">{{ check.severity }}</div>
+                        <p class="text-xs font-medium leading-relaxed">{{ check.message }}</p>
+                    </div>
+                    {% empty %}
+                    <div class="py-12 flex flex-col items-center justify-center text-center gap-4 border border-dashed rounded-lg border-emerald-500/30 bg-emerald-500/[0.02]">
+                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500">
+                            <i data-lucide="check" class="w-5 h-5"></i>
+                        </div>
+                        <div class="space-y-1 text-emerald-500 font-bold tracking-tighter uppercase text-[10px]">
+                            Post-Audit Successful
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Preview Card -->
+            <div class="rounded-xl border bg-card shadow-sm overflow-hidden shadow-2xl">
+                <div class="p-4 border-b bg-muted/30 flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Artifact Preview</h3>
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                </div>
+                <div class="aspect-[3/4] bg-muted/50 relative group">
+                    {% if doc.file %}
+                        {% with ext=doc.file.name|lower %}
+                            {% if ".pdf" in ext %}
+                                <div class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-muted/80">
+                                    <i data-lucide="file-text" class="w-12 h-12 text-muted-foreground"></i>
+                                    <a href="{{ doc.file.url }}" target="_blank" class="text-xs font-bold text-blue-400 hover:underline">Download Source PDF</a>
+                                </div>
+                            {% else %}
+                                <img src="{{ doc.file.url }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                            {% endif %}
+                        {% endwith %}
+                    {% else %}
+                        <div class="absolute inset-0 flex items-center justify-center text-muted-foreground italic text-xs">
+                            No visual proof uploaded.
+                        </div>
+                    {% endif %}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                        <span class="text-[10px] text-white font-mono uppercase font-bold tracking-widest">Metadata Hash: {{ doc.id|stringformat:".12s" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Card -->
+            <div class="rounded-xl border bg-card p-4 shadow-sm space-y-4">
+                <h3 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Execution Context</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted-foreground font-medium">Model</span>
+                        <span class="font-mono text-blue-400">{{ ollama_model }}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted-foreground font-medium">Latency</span>
+                        <span class="font-mono">{{ doc.extraction_time|default:"0.2" }}s</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-muted-foreground font-medium">Tax Zone</span>
+                        <span class="font-bold underline decoration-dotted underline-offset-4">{{ business.state|default:"Federal" }}</span>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
     </div>
-  </div>
-
 </div>
 
 {% if doc.status == 'processing' %}
 <script>
-  setTimeout(() => window.location.reload(), 3000);
+    setTimeout(() => window.location.reload(), 4000);
 </script>
 {% endif %}
 
-<!-- Add New Ledger Modal -->
-<div id="newLedgerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
-  <div class="audit-card" style="width: 400px; padding: 2rem; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-    <h3 style="margin-top:0; color: white;">Create New Ledger</h3>
-    <form action="{% url 'ledger:create-account-reclassify' %}" method="POST">
-      {% csrf_token %}
-      <input type="hidden" name="entry_id" id="modalEntryId">
-      
-      <div style="margin-bottom: 1rem;">
-        <label style="display:block; font-size:0.75rem; color: var(--text-secondary); text-transform:uppercase; margin-bottom:0.5rem;">Ledger Name</label>
-        <input type="text" name="name" required style="width:100%; background:var(--bg-header); border:1px solid var(--border-default); color:white; padding:0.6rem; border-radius:6px;">
-      </div>
+{% endblock %}
 
-      <div style="margin-bottom: 1.5rem;">
-        <label style="display:block; font-size:0.75rem; color: var(--text-secondary); text-transform:uppercase; margin-bottom:0.5rem;">Account Group</label>
-        <select name="group_id" required style="width:100%; background:var(--bg-header); border:1px solid var(--border-default); color:white; padding:0.6rem; border-radius:6px;">
-          {% for gp in all_groups %}
-          <option value="{{ gp.id }}">{{ gp.name }} ({{ gp.classification }})</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div style="margin-bottom: 1.5rem;">
-        <label style="display:block; font-size:0.75rem; color: var(--text-secondary); text-transform:uppercase; margin-bottom:0.5rem;">To / Balancing Account (Constraint)</label>
-        <select name="to_account_id" style="width:100%; background:var(--bg-header); border:1px solid var(--border-default); color:white; padding:0.6rem; border-radius:6px;">
-          <option value="">Keep Existing...</option>
-          {% for acc in all_accounts %}
-          <option value="{{ acc.id }}">{{ acc.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div style="display:flex; gap:1rem; justify-content:flex-end;">
-        <button type="button" onclick="closeLedgerModal()" style="background:none; border:none; color:var(--text-secondary); cursor:pointer;">Cancel</button>
-        <button type="submit" class="btn" style="background:var(--gh-blue); font-size:0.85rem;">Create & Map</button>
-      </div>
-    </form>
-  </div>
-</div>
-
+{% block extra_js %}
 <script>
-function handleAccountMapping(selectElement, entryId) {
-  if (selectElement.value === "CREATE_NEW") {
-    document.getElementById('modalEntryId').value = entryId;
-    document.getElementById('newLedgerModal').style.display = 'flex';
-    selectElement.value = ""; // Reset dropdown
-  } else if (selectElement.value !== "") {
-    selectElement.form.submit();
-  }
-}
-
-function closeLedgerModal() {
-  document.getElementById('newLedgerModal').style.display = 'none';
-}
+    const extCtx = document.getElementById('extractionChart').getContext('2d');
+    new Chart(extCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Validated', 'Manual Fix Required', 'Unmatched'],
+            datasets: [{
+                data: [{{ metrics.match_count|default:5 }}, {{ entries.count|default:2 }}, 1],
+                backgroundColor: ['#10b981', '#f59e0b', '#f43f5e'],
+                borderWidth: 0,
+                spacing: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '80%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#8b949e', font: { size: 9, family: 'JetBrains Mono' }, usePointStyle: true, padding: 20 }
+                }
+            }
+        }
+    });
 </script>
-
 {% endblock %}

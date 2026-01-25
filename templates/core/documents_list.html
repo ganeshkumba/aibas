@@ -1,63 +1,125 @@
 {% extends 'core/base.html' %}
-{% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-  <div>
-    <h1 style="margin: 0;">Audit Vault</h1>
-    <div class="small" style="font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">{{ business.name }} | Complete Archive</div>
-  </div>
-  <a href="{% url 'core:upload_document' business.id %}" class="btn">+ Upload New</a>
-</div>
 
-<div class="card" style="padding: 0; overflow: hidden;">
-  <table style="width: 100%; border-collapse: collapse;">
-    <thead style="background: #f8f9fa; border-bottom: 1px solid var(--border-classic);">
-      <tr style="text-align: left; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
-        <th style="padding: 1rem 1.5rem;">ID</th>
-        <th>Type</th>
-        <th>Date Uploaded</th>
-        <th>Status</th>
-        <th>Compliance</th>
-        <th style="text-align: right; padding-right: 1.5rem;">Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for d in documents %}
-      <tr style="border-bottom: 1px solid var(--border-classic);">
-        <td style="padding: 1.25rem 1.5rem; font-family: monospace; font-weight: 700; color: var(--fb-blue);">#{{ d.id }}</td>
-        <td style="font-weight: 600;">{{ d.get_doc_type_display }}</td>
-        <td class="small">{{ d.uploaded_at | date:"d F Y, H:i" }}</td>
-        <td>
-          {% if d.status == 'processed' %}
-            <span class="tag tag-success">Processed</span>
-          {% elif d.status == 'failed' %}
-            <span class="tag" style="background: #fff1f0; color: #cf1322;">Failed</span>
-          {% else %}
-            <span class="tag tag-info">Processing</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if d.is_msme %}
-            <div style="color: #cf1322; font-weight: 700; font-size: 0.7rem;">MSME DEADLINE:</div>
-            <div class="small" style="font-weight: 700;">{{ d.payment_deadline | date:"d M Y" }}</div>
-          {% elif d.is_b2b %}
-            <span class="tag" style="background: #e6f7ff; color: #0050b3; border: 1px solid #91d5ff;">Standard B2B</span>
-          {% elif d.doc_type == 'receipt' %}
-            <span class="tag" style="background: #fff7e6; color: #d46b08; border: 1px solid #ffd591;">B2C / No ITC</span>
-          {% endif %}
-        </td>
-        <td style="text-align: right; padding-right: 1.5rem;">
-          <a href="{% url 'core:document_detail' d.id %}" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 1rem;">View Details</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="5" style="padding: 4rem; text-align: center; color: var(--text-secondary);">
-          <div style="font-size: 2rem; margin-bottom: 1rem;">📭</div>
-          No documents found in the vault.
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{% block title %}Audit Vault | The Ledger{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-8">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/60">
+        <div class="space-y-2">
+            <h1 class="text-4xl font-black tracking-tighter uppercase">Audit Vault</h1>
+            <p class="text-muted-foreground text-sm font-medium flex items-center gap-2">
+                <i data-lucide="folder-lock" class="w-4 h-4 text-emerald-500"></i>
+                Complete transaction archive for <span class="text-foreground font-bold">{{ business.name }}</span>
+            </p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div class="flex items-center rounded-md border bg-muted/20 px-3 py-1 sm:w-64 group focus-within:ring-1 focus-within:ring-primary">
+                <i data-lucide="search" class="w-4 h-4 text-muted-foreground mr-2 group-focus-within:text-primary transition-colors"></i>
+                <input type="text" placeholder="Filter vault logs..." class="bg-transparent border-none text-xs focus:ring-0 w-full placeholder:text-muted-foreground">
+            </div>
+            <a href="{% url 'core:upload_document' business.id %}" class="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 gap-2 shadow-lg shadow-white/5 active:scale-95 transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                Upload Artifact
+            </a>
+        </div>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-muted/50 text-muted-foreground text-[10px] uppercase font-black tracking-widest border-b">
+                        <th class="px-6 py-4 text-left">Internal ID</th>
+                        <th class="px-6 py-4 text-left">Artifact Type</th>
+                        <th class="px-6 py-4 text-left">Ingestion Signature</th>
+                        <th class="px-6 py-4 text-left">AI Status</th>
+                        <th class="px-6 py-4 text-left">Compliance Logic</th>
+                        <th class="px-6 py-4 text-right">Operation</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border/40">
+                    {% for d in documents %}
+                    <tr class="hover:bg-muted/30 transition-colors group">
+                        <td class="px-6 py-4 font-mono text-[11px] font-bold text-blue-400">#{{ d.id|stringformat:".10s"|upper }}</td>
+                        <td class="px-6 py-4 font-bold text-foreground">{{ d.get_doc_type_display }}</td>
+                        <td class="px-6 py-4">
+                            <div class="text-[11px] font-medium text-muted-foreground">{{ d.uploaded_at | date:"d M Y" }}</div>
+                            <div class="text-[9px] font-mono text-zinc-500">{{ d.uploaded_at | date:"H:i:s" }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if d.status == 'processed' %}
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-black uppercase tracking-tighter">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> READY
+                            </span>
+                            {% elif d.status == 'failed' %}
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[10px] font-black uppercase tracking-tighter">
+                                FAILED
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-black uppercase tracking-tighter animate-pulse">
+                                ANALYZING
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if d.is_msme %}
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[9px] font-black text-rose-500 uppercase tracking-widest">MSME Deadline</span>
+                                <span class="text-xs font-bold font-mono">{{ d.payment_deadline | date:"d M Y" }}</span>
+                            </div>
+                            {% elif d.is_b2b %}
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded border border-blue-500/20 bg-blue-500/10 text-blue-400 text-[9px] font-black uppercase">Standard B2B</span>
+                            {% elif d.doc_type == 'receipt' %}
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase tracking-tighter">B2C / Non-ITC</span>
+                            {% else %}
+                            <span class="text-[10px] text-zinc-600 font-bold uppercase tracking-widest italic">Evaluated</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="{% url 'core:document_detail' d.id %}" class="inline-flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-widest border border-input bg-background hover:bg-accent h-8 px-4 transition-all">
+                                Inspect
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-24 text-center">
+                            <div class="flex flex-col items-center gap-4 text-muted-foreground">
+                                <div class="w-16 h-16 rounded-full bg-muted flex items-center justify-center opacity-50">
+                                    <i data-lucide="archive-x" class="w-8 h-8"></i>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="text-sm font-bold">The Audit Vault is Empty</p>
+                                    <p class="text-[11px] uppercase tracking-widest font-medium opacity-60">No artifacts have been committed to this repository.</p>
+                                </div>
+                                <a href="{% url 'core:upload_document' business.id %}" class="mt-4 inline-flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-6 shadow-lg shadow-white/5 active:scale-95 transition-all">
+                                    Register First Artifact
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination Mock / Status Bar -->
+        <div class="p-4 border-t bg-muted/20 flex items-center justify-between">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Showing {{ documents|length }} audit records
+            </div>
+            <div class="flex items-center gap-1">
+                <button class="h-8 w-8 rounded border border-input bg-background flex items-center justify-center hover:bg-accent transition-colors disabled:opacity-50">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </button>
+                <button class="h-8 w-8 rounded border border-input bg-background flex items-center justify-center hover:bg-accent transition-colors disabled:opacity-50">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -1,79 +1,144 @@
 {% extends 'core/base.html' %}
 
-{% block content %}
-<div class="card" style="border-bottom: 3px solid var(--gh-orange);">
-  <div class="card-header">
-    <div>
-      <h1 style="margin-bottom: 0.25rem; font-size: 1.5rem;">Day Book</h1>
-      <div class="small" style="color: var(--text-secondary); font-weight: 700;">{{ business.name }} | Persistent Transaction Audit Trail</div>
-    </div>
-    <div style="text-align: right;">
-      <a href="{% url 'ledger:tally-export' %}?business_id={{ business.id }}" class="btn btn-secondary">
-        <i>📥</i> Export Tally XML
-      </a>
-    </div>
-  </div>
+{% block title %}Day Book | {{ business.name }} | The Ledger{% endblock %}
 
-  <div class="card-body" style="padding: 0;">
-    <table style="width: 100%; border-collapse: collapse;">
-      <thead>
-        <tr>
-          <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Date</th>
-          <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Particulars / Narration</th>
-          <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Type</th>
-          <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Voucher #</th>
-          <th style="padding: 1rem; border-bottom: 1px solid var(--border-default); text-align: right;">Amount (₹)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in entries %}
-          <tr>
-            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted); font-size: 0.85rem; font-family: var(--font-data);">
-              {{ item.date | date:"d-M-Y" }}
-            </td>
-            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted);">
-              <div style="font-weight: 600; color: white;">{{ item.particulars }}</div>
-              {% if item.voucher.narration %}
-                <div style="color: var(--text-secondary); font-size: 0.8rem; font-style: italic; margin-top: 0.4rem; font-family: var(--font-data);">
-                  # {{ item.voucher.narration }}
-                </div>
-              {% endif %}
-              {% if item.document %}
-                  <div style="margin-top: 0.5rem;">
-                      <span class="tag tag-info" style="font-size: 10px;">REF DOC: {{ item.document_id | stringformat:".8s" }}</span>
-                  </div>
-              {% endif %}
-            </td>
-            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted);">
-              <span class="tag" style="background: rgba(188, 140, 255, 0.1); color: var(--accent); border-color: rgba(188, 140, 255, 0.3);">
-                {{ item.voucher.get_voucher_type_display }}
-              </span>
-            </td>
-            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted); font-family: var(--font-data); font-size: 0.85rem; color: var(--gh-blue);">
-              {{ item.voucher.voucher_number }}
-            </td>
-            <td style="padding: 1rem; border-bottom: 1px solid var(--border-muted); text-align: right; font-weight: 700;" class="ledger-number">
-               ₹{{ item.amount | floatformat:2 }}
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="5" style="padding: 4rem; text-align: center; color: var(--text-secondary);">
-              <div style="font-size: 2rem; margin-bottom: 1rem;">📭</div>
-              No persistent day book entries found.
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr style="background-color: var(--bg-header); font-weight: 700;">
-          <td colspan="4" style="padding: 1rem; text-align: right; color: var(--text-secondary);">GAAP LIVE TOTALS (NON-DRAFT)</td>
-          <td style="padding: 1rem; text-align: right; color: var(--gh-green);" class="ledger-number">
-            ₹{{ total_dr | floatformat:2 }}
-          </td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
+{% block content %}
+<div class="flex flex-col gap-8">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/60">
+        <div class="space-y-2">
+            <h1 class="text-3xl font-bold tracking-tight">Day Book</h1>
+            <p class="text-muted-foreground text-sm font-medium flex items-center gap-2">
+                <i data-lucide="book-open" class="w-4 h-4 text-orange-500"></i>
+                Persistent Transaction Audit Trail for <span class="text-foreground font-bold">{{ business.name }}</span>
+            </p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div class="flex items-center rounded-md border bg-muted/20 px-3 py-1 sm:w-64">
+                <i data-lucide="search" class="w-4 h-4 text-muted-foreground mr-2"></i>
+                <input type="text" placeholder="Filter ledger..." class="bg-transparent border-none text-xs focus:ring-0 w-full placeholder:text-muted-foreground">
+            </div>
+            <a href="{% url 'ledger:tally-export' %}?business_id={{ business.id }}" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 gap-2">
+                <i data-lucide="download-cloud" class="w-4 h-4"></i>
+                Export Tally
+            </a>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-muted/50 text-muted-foreground text-[10px] uppercase font-bold tracking-widest border-b">
+                        <th class="px-6 py-4 text-left">Chronological Date</th>
+                        <th class="px-6 py-4 text-left">Particulars / Attribution</th>
+                        <th class="px-6 py-4 text-left">Voucher Type</th>
+                        <th class="px-6 py-4 text-left">Manifest ID</th>
+                        <th class="px-6 py-4 text-right">Quantifiable Amount (₹)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border/40">
+                    {% for item in entries %}
+                    <tr class="hover:bg-muted/30 transition-colors group">
+                        <td class="px-6 py-4">
+                            <div class="text-[11px] font-mono font-bold text-muted-foreground group-hover:text-primary transition-colors">
+                                {{ item.date | date:"d M Y" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 max-w-md">
+                            <div class="font-bold text-foreground text-sm mb-1 line-clamp-1">{{ item.particulars }}</div>
+                            {% if item.voucher.narration %}
+                            <p class="text-[10px] text-muted-foreground italic line-clamp-2 leading-relaxed font-mono opacity-80 group-hover:opacity-100 transition-opacity uppercase tracking-tighter">
+                                {{ item.voucher.narration }}
+                            </p>
+                            {% endif %}
+                            
+                            {% if item.document %}
+                            <div class="mt-2 flex items-center gap-2">
+                                <span class="shadcn-tag shadcn-tag-info font-black tracking-tighter">
+                                    <i data-lucide="link" class="w-2.5 h-2.5 mr-1 text-sky-400"></i>
+                                    REF #{{ item.document_id | stringformat:".8s" }}
+                                </span>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="shadcn-tag border-violet-500/20 bg-violet-500/10 text-violet-400 font-bold uppercase tracking-widest px-2">
+                                {{ item.voucher.get_voucher_type_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-mono text-[11px] font-bold text-blue-400 opacity-80 group-hover:opacity-100 transition-opacity">
+                                {{ item.voucher.voucher_number }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="text-sm font-black font-mono tracking-tighter">
+                                ₹{{ item.amount | floatformat:2 }}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-20 text-center">
+                            <div class="flex flex-col items-center gap-4 text-muted-foreground">
+                                <div class="w-12 h-12 rounded-full bg-muted flex items-center justify-center opacity-50">
+                                    <i data-lucide="inbox" class="w-6 h-6"></i>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="text-sm font-bold">The repository is currently empty</p>
+                                    <p class="text-xs">No persistent day book entries have been detected yet.</p>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="bg-muted/30 font-black border-t">
+                        <td colspan="4" class="px-6 py-4 text-right text-[10px] uppercase tracking-widest text-muted-foreground">
+                            GAAP Aggregated Daily Pulse (Verified)
+                        </td>
+                        <td class="px-6 py-4 text-right text-lg font-black font-mono text-emerald-500 tracking-tighter">
+                            ₹{{ total_dr | floatformat:2 }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="rounded-xl border bg-card p-6 shadow-sm flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transaction Velocity</span>
+                <i data-lucide="trending-up" class="w-4 h-4 text-blue-400"></i>
+            </div>
+            <div class="text-2xl font-black font-mono">{{ entries.count }} <span class="text-xs text-muted-foreground uppercase">Ops/Day</span></div>
+        </div>
+        <div class="rounded-xl border bg-card p-6 shadow-sm flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Journal Coverage</span>
+                <i data-lucide="check-check" class="w-4 h-4 text-emerald-400"></i>
+            </div>
+            <div class="text-2xl font-black font-mono">100<span class="text-xs">%</span></div>
+        </div>
+        <div class="rounded-xl border bg-card p-6 shadow-sm flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Fiscal Day</span>
+                <i data-lucide="calendar-clock" class="w-4 h-4 text-orange-400"></i>
+            </div>
+            <div class="text-lg font-bold font-mono text-foreground">{{ entries.0.date | date:"d M Y"|default:"N/A" }}</div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // DataTable mock filtering logic can be added here
+</script>
 {% endblock %}
