@@ -1,41 +1,78 @@
 {% extends 'core/base.html' %}
 
+{% block title %}Sign In | The Ledger{% endblock %}
+
 {% block content %}
-<div class="card" style="max-width: 440px; margin: 4rem auto;">
-  <div class="card-header" style="justify-content: center; padding: 1.5rem;">
-    <h2 style="font-size: 1.25rem;">Sign in to The Ledger</h2>
-  </div>
-
-  <div class="card-body" style="padding: 2rem;">
-    <form method="post">
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-        <div class="alert-gh" style="background: rgba(248, 81, 73, 0.1); border-color: rgba(248, 81, 73, 0.4); color: var(--danger); margin-bottom: 2rem;">
-            {{ form.non_field_errors }}
-        </div>
-        {% endif %}
-
-        <div style="margin-bottom: 1.5rem;">
-            <label>Email address</label>
-            {{ form.username }}
-        </div>
-
-        <div style="margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <label>Password</label>
-                <a href="#" style="font-size: 0.75rem; color: var(--gh-blue); text-decoration: none;">Forgot password?</a>
+<div class="h-full flex items-center justify-center p-4">
+    <div class="w-full max-w-[400px] space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
+        <!-- Compact Header -->
+        <div class="flex flex-col items-center gap-3 text-center">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-black text-xl shadow-lg">
+                L
             </div>
-            {{ form.password }}
+            <div class="space-y-0.5">
+                <h2 class="text-xl font-bold tracking-tight">Sign In</h2>
+                <p class="text-[9px] text-muted-foreground uppercase tracking-widest font-black">AI-Autonomous Financial OS</p>
+            </div>
         </div>
 
-        <button type="submit" class="btn" style="width: 100%; justify-content: center; padding: 10px;">Sign in</button>
-    </form>
-  </div>
+        <div class="rounded-lg border bg-card text-card-foreground shadow-2xl">
+            <div class="p-6">
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
 
-  <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem; border: 1px solid var(--border-default); border-radius: 6px; padding: 1.25rem;">
-    New to The Ledger? 
-    <a href="{% url 'core:signup' %}" style="color: var(--gh-blue); text-decoration: none;">Create an account</a>.
-  </div>
+                    {% if form.non_field_errors %}
+                    <div class="flex items-center gap-2 p-2.5 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-bold uppercase">
+                        <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-rose-500"></i>
+                        {{ form.non_field_errors.0 }}
+                    </div>
+                    {% endif %}
+
+                    <div class="space-y-1.5">
+                        <label class="text-[9px] font-black uppercase tracking-tight text-muted-foreground">Identity Protocol (Email)</label>
+                        <div class="relative group">
+                            <i data-lucide="mail" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors"></i>
+                            {{ form.username }}
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[9px] font-black uppercase tracking-tight text-muted-foreground">Access Key (Password)</label>
+                            <a href="#" class="text-[8px] font-bold text-blue-400 hover:text-blue-300 uppercase tracking-widest">Forgot?</a>
+                        </div>
+                        <div class="relative group">
+                            <i data-lucide="lock" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors"></i>
+                            {{ form.password }}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="inline-flex items-center justify-center rounded-md text-xs font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-full mt-2 shadow-lg active:scale-95 transition-all">
+                        Initialize Session
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center gap-2">
+            <div class="text-center rounded-lg border bg-card/50 p-3 w-full border-dashed">
+                <span class="text-[10px] text-muted-foreground uppercase font-medium">New Entity?</span>
+                <a href="{% url 'core:signup' %}" class="ml-1 text-[10px] font-black text-blue-400 hover:underline tracking-tight">Create Enterprise ID</a>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            if (input.type !== 'submit') {
+                input.className = 'flex h-9 w-full rounded-md border border-input bg-background px-8 py-1.5 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+                input.placeholder = input.name.charAt(0).toUpperCase() + input.name.slice(1);
+            }
+        });
+        lucide.createIcons();
+    });
+</script>
 {% endblock %}

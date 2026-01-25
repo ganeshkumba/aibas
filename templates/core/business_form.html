@@ -1,27 +1,73 @@
 {% extends 'core/base.html' %}
 
+{% block title %}Register Enterprise | The Ledger{% endblock %}
+
 {% block content %}
-<div class="card" style="max-width: 600px; margin: 2rem auto; padding: 2.5rem;">
-  <h2 style="margin-bottom: 0.5rem;">Register New Entity</h2>
-  <div class="small" style="font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 2rem;">
-    Business Profile & Compliance Details
-  </div>
+<div class="h-full flex items-center justify-center p-4">
+    <div class="w-full max-w-[500px] space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
+        <!-- Compact Header -->
+        <div class="flex items-center gap-4 border-b pb-4">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-black text-xl shadow-lg">
+                L
+            </div>
+            <div class="space-y-0.5 text-left">
+                <h1 class="text-xl font-bold tracking-tight">Register Entity</h1>
+                <p class="text-[9px] text-muted-foreground uppercase tracking-[0.2em] font-black">Core Business Profile</p>
+            </div>
+        </div>
 
-  <form method="post">
-    {% csrf_token %}
-    
-    <div style="margin-bottom: 1.5rem;">
-      {{ form.as_p }}
+        <div class="rounded-lg border bg-card text-card-foreground shadow-xl overflow-hidden">
+            <div class="p-6">
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    
+                    <div class="grid gap-4">
+                        {% for field in form %}
+                        <div class="space-y-1.5">
+                            <label class="text-[9px] font-black uppercase tracking-tight text-muted-foreground">
+                                {{ field.label }}
+                            </label>
+                            <div class="relative group">
+                                {% if 'gst' in field.id_for_label %}
+                                    <i data-lucide="tag" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors"></i>
+                                {% elif 'name' in field.id_for_label %}
+                                    <i data-lucide="building" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors"></i>
+                                {% elif 'state' in field.id_for_label %}
+                                    <i data-lucide="map-pin" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors"></i>
+                                {% endif %}
+                                {{ field }}
+                            </div>
+                            {% if field.errors %}
+                                <p class="text-[9px] font-bold text-rose-500 uppercase tracking-tighter">{{ field.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="submit" class="inline-flex items-center justify-center rounded-md text-xs font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-full mt-2 shadow-lg active:scale-95 transition-all">
+                        Initialize Entity
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <p class="text-[9px] text-muted-foreground font-mono text-center">
+            Ledger cluster will initialize a dedicated storage zone for this entity.
+        </p>
     </div>
-
-    <button type="submit" class="btn" style="width: 100%; padding: 1rem; font-size: 1rem; margin-top: 1rem;">Foundation Entity</button>
-  </form>
 </div>
 
-<style>
-  /* Fix as_p rendering to match our theme */
-  form p { margin-bottom: 1.25rem; }
-  form label { display: block; font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.25rem; }
-  form input, form select, form textarea { margin-top: 0; }
-</style>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.type === 'checkbox') {
+                input.className = 'h-3.5 w-3.5 rounded border-input bg-background text-primary focus:ring-ring';
+            } else if (input.type !== 'radio' && input.type !== 'submit') {
+                input.className = 'flex h-9 w-full rounded-md border border-input bg-background px-8 py-1.5 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+            }
+        });
+        lucide.createIcons();
+    });
+</script>
 {% endblock %}

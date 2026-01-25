@@ -1,125 +1,186 @@
 {% extends 'core/base.html' %}
+
+{% block title %}Inventory Intelligence | The Ledger{% endblock %}
+
 {% block content %}
-<style>
-    .inventory-header {
-        background: linear-gradient(135deg, #064e3b 0%, var(--bg-header) 100%);
-        color: white;
-        padding: 2.5rem;
-        border-radius: 6px;
-        margin-bottom: 2rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border: 1px solid var(--border-default);
-        border-bottom: 4px solid var(--gh-green);
-    }
-
-    .inventory-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 2rem;
-    }
-
-    .stock-alert {
-        border-left: 4px solid var(--danger) !important;
-        background: rgba(248, 81, 73, 0.02);
-    }
-
-    .movement-item {
-        padding: 1rem;
-        border-bottom: 1px solid var(--border-muted);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .movement-item:last-child {
-        border-bottom: none;
-    }
-</style>
-
-<div class="inventory-header">
-    <div>
-        <h1 style="margin: 0; font-weight: 700; font-size: 1.75rem;">Inventory Hub</h1>
-        <div style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; font-family: var(--font-data);">
-            Real-time stock levels derived from AI-processed transactions
+<div class="flex flex-col gap-8">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/60">
+        <div class="space-y-2">
+            <h1 class="text-4xl font-black tracking-tighter uppercase italic">Inventory Intelligence</h1>
+            <p class="text-muted-foreground text-sm font-medium flex items-center gap-2">
+                <i data-lucide="package" class="w-4 h-4 text-amber-500"></i>
+                Real-time stock velocity and valuation engine for <span class="text-foreground font-bold">{{ business.name }}</span>
+            </p>
+        </div>
+        
+        <div class="text-right">
+            <p class="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Portfolio Valuation</p>
+            <div class="text-4xl font-black font-mono text-emerald-400">₹{{ stats.total_value|floatformat:2 }}</div>
         </div>
     </div>
-    <div style="text-align: right;">
-        <div class="small" style="color: var(--text-secondary); font-weight: 800; text-transform: uppercase;">Stock Valuation</div>
-        <div style="font-size: 2.25rem; font-weight: 700; color: var(--gh-green); font-family: var(--font-data);">₹{{ stats.total_value|floatformat:2 }}</div>
-    </div>
-</div>
 
-<div class="inventory-grid">
-    <div class="card">
-        <div class="card-header">
-            <h3 style="margin: 0; font-size: 1rem;">Product Insight Catalog</h3>
-            <span class="tag tag-info">{{ stats.item_count }} Sku's Active</span>
+    <!-- Quick Insights -->
+    <div class="grid gap-6 md:grid-cols-4">
+        <div class="rounded-xl border bg-card p-6 shadow-sm space-y-2">
+            <p class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active SKUs</p>
+            <div class="text-3xl font-black font-mono">{{ stats.item_count }}</div>
         </div>
-        <div class="card-body" style="padding: 0;">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr>
-                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Product</th>
-                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">SKU/HSN</th>
-                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Stock Level</th>
-                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Cost (Avg)</th>
-                        <th style="padding: 1rem; border-bottom: 1px solid var(--border-default); text-align: right;">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for product in products %}
-                    <tr class="{% if product.current_stock <= product.low_stock_threshold %}stock-alert{% endif %}">
-                        <td style="padding: 1rem; font-weight: 600; color: white; border-bottom: 1px solid var(--border-muted);">{{ product.name }}</td>
-                        <td style="padding: 1rem; font-family: var(--font-data); font-size: 0.85rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-muted);">{{ product.sku|default:"-" }}</td>
-                        <td style="padding: 1rem; font-weight: 700; font-family: var(--font-data); color: var(--gh-blue); border-bottom: 1px solid var(--border-muted);">
-                            {{ product.current_stock }} {{ product.uom }}
-                        </td>
-                        <td style="padding: 1rem; font-family: var(--font-data); border-bottom: 1px solid var(--border-muted);">₹{{ product.default_purchase_price }}</td>
-                        <td style="padding: 1rem; text-align: right; border-bottom: 1px solid var(--border-muted);">
-                            {% if product.current_stock <= product.low_stock_threshold %}
-                                <span class="tag" style="background: rgba(248, 81, 73, 0.1); color: var(--danger); border-color: var(--danger);">CRITICAL</span>
-                            {% else %}
-                                <span class="tag tag-success">HEALTHY</span>
-                            {% endif %}
-                        </td>
-                    </tr>
+        <div class="rounded-xl border bg-card p-6 shadow-sm space-y-2 border-rose-500/20 bg-rose-500/[0.01]">
+            <p class="text-[10px] font-black uppercase tracking-widest text-rose-500">Stock Alerts</p>
+            <div class="text-3xl font-black font-mono text-rose-500">{{ stats.low_stock_count }}</div>
+        </div>
+        <div class="md:col-span-2 rounded-xl border bg-card p-6 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Liquidity Pulse (Out/In Ratio)</p>
+                <span class="shadcn-tag shadcn-tag-success font-mono font-bold">{{ stats.turnover_ratio|floatformat:1 }}%</span>
+            </div>
+            <div class="h-4 w-full bg-muted rounded-full overflow-hidden flex shadow-inner">
+                <div class="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-1000" style="width: {{ stats.turnover_ratio }}%"></div>
+                <div class="h-full bg-amber-500/20 flex-1"></div>
+            </div>
+            <div class="flex justify-between mt-2 text-[9px] font-mono text-muted-foreground">
+                <span>TOTAL IN: {{ stats.total_in }}</span>
+                <span>TOTAL OUT: {{ stats.total_out }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid gap-8 lg:grid-cols-3">
+        <!-- Catalog Table -->
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            <div class="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <div class="p-4 border-b bg-muted/20 flex items-center justify-between">
+                    <h3 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                        Live Artifact Catalog
+                    </h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-muted/50 text-muted-foreground text-[10px] uppercase font-black tracking-widest border-b">
+                                <th class="px-6 py-4 text-left">Product Architecture</th>
+                                <th class="px-6 py-4 text-left">Real-Time Volatility</th>
+                                <th class="px-6 py-4 text-left">Unit Basis</th>
+                                <th class="px-6 py-4 text-right">Integrity</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border/40">
+                            {% for product in products %}
+                            <tr class="hover:bg-muted/30 transition-colors group">
+                                <td class="px-6 py-4">
+                                    <div class="font-bold text-foreground">{{ product.name }}</div>
+                                    <div class="text-[10px] font-mono text-blue-400 uppercase">SKU: {{ product.sku|default:"VIRTUAL-VOID" }}</div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col gap-1.5">
+                                        <div class="font-mono font-bold text-foreground">{{ product.current_stock }} {{ product.uom }}</div>
+                                        <div class="w-32 h-1 bg-muted rounded-full overflow-hidden">
+                                            <div class="h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" style="width: {% if product.current_stock > 100 %}100{% else %}{{ product.current_stock }}{% endif %}%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 font-mono font-bold text-muted-foreground">₹{{ product.default_purchase_price|floatformat:2 }}</td>
+                                <td class="px-6 py-4 text-right">
+                                    {% if product.current_stock <= product.low_stock_threshold %}
+                                        <span class="shadcn-tag shadcn-tag-error font-black uppercase tracking-tighter">CRITICAL</span>
+                                    {% else %}
+                                        <span class="shadcn-tag shadcn-tag-success font-black uppercase tracking-tighter">STABLE</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="px-6 py-12 text-center text-muted-foreground italic text-xs uppercase tracking-widest">
+                                    Repository Void: No products detected.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Analytics -->
+        <div class="flex flex-col gap-6">
+            <!-- Asset Dist Chart -->
+            <div class="rounded-xl border bg-card p-6 shadow-sm space-y-6">
+                <h3 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-3.5 h-3.5"></i>
+                    Valuation Distribution
+                </h3>
+                <div class="h-[240px] relative">
+                    <canvas id="inventoryChart"></canvas>
+                </div>
+                <p class="text-[10px] text-muted-foreground italic text-center">Top 5 products by total valuation impact.</p>
+            </div>
+
+            <!-- Movement Log -->
+            <div class="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <div class="p-4 border-b bg-muted/20">
+                    <h3 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+                        Audit Movement Trail
+                    </h3>
+                </div>
+                <div class="p-2 space-y-1">
+                    {% for move in movements %}
+                    <div class="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-all border border-transparent hover:border-border/60">
+                        <div class="space-y-0.5">
+                            <div class="text-xs font-bold">{{ move.product.name }}</div>
+                            <div class="text-[9px] font-mono text-muted-foreground uppercase">{{ move.date | date:"d M H:i" }} • {{ move.get_type_display }}</div>
+                        </div>
+                        <div class="font-mono font-bold {% if move.type == 'IN' %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                            {% if move.type == 'IN' %}+{% else %}-{% endif %}{{ move.quantity }}
+                        </div>
+                    </div>
                     {% empty %}
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-                            <div style="font-size: 2rem; margin-bottom: 1rem;">📦</div>
-                            No products found in the catalog.
-                        </td>
-                    </tr>
+                    <div class="py-12 text-center text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+                        Zero Activity Detected
+                    </div>
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">
-            <h3 style="margin: 0; font-size: 1rem;">Audit Movement Log</h3>
-        </div>
-        <div class="card-body" style="padding: 0;">
-            {% for move in movements %}
-                <div class="movement-item">
-                    <div>
-                        <div style="font-weight: 600; font-size: 0.9rem; color: white;">{{ move.product.name }}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; font-family: var(--font-data);">{{ move.date }} | {{ move.get_type_display }}</div>
-                    </div>
-                    <div style="font-family: var(--font-data); font-weight: 700; color: {% if move.type == 'IN' %}var(--gh-green){% else %}var(--danger){% endif %};">
-                        {% if move.type == 'IN' %}+{% else %}-{% endif %}{{ move.quantity }}
-                    </div>
                 </div>
-            {% empty %}
-                <div style="text-align: center; color: var(--text-secondary); padding: 4rem;">
-                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚖️</div>
-                    No stock movements logged.
-                </div>
-            {% endfor %}
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const chartData = JSON.parse('{{ chart_data|safe }}');
+    const invCtx = document.getElementById('inventoryChart').getContext('2d');
+    new Chart(invCtx, {
+        type: 'doughnut',
+        devicePixelRatio: window.devicePixelRatio || 2,
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                data: chartData.values,
+                backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#f43f5e', '#8b5cf6'],
+                borderColor: 'transparent',
+                hoverOffset: 12,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { 
+                        color: '#64748b', 
+                        font: { size: 10, weight: '600' }, 
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}

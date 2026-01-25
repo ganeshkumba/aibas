@@ -1,168 +1,194 @@
 {% extends 'core/base.html' %}
 
+{% block title %}Amortization Engine | The Ledger{% endblock %}
+
 {% block content %}
-<style>
-    .amort-header {
-        background: linear-gradient(135deg, #1a2a4b 0%, var(--bg-header) 100%);
-        color: white;
-        padding: 2.5rem;
-        border-radius: 6px;
-        margin-bottom: 2rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border: 1px solid var(--border-default);
-    }
-
-    .amort-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-
-    .amort-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-default);
-        border-radius: 6px;
-        padding: 1.5rem;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .amort-card::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: var(--gh-blue);
-    }
-
-    .progress-bar {
-        height: 6px;
-        background: var(--bg-header);
-        border-radius: 3px;
-        margin: 1.25rem 0;
-        overflow: hidden;
-        border: 1px solid var(--border-muted);
-    }
-
-    .progress-fill {
-        height: 100%;
-        background: var(--gh-green);
-        transition: width 0.5s ease-out;
-    }
-
-    .movement-list {
-        margin-top: 1.25rem;
-        border-top: 1px solid var(--border-default);
-        padding-top: 1rem;
-        max-height: 250px;
-        overflow-y: auto;
-    }
-
-    .movement-item {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.85rem;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid var(--border-muted);
-        font-family: var(--font-data);
-    }
-
-    .movement-item:last-child {
-        border-bottom: none;
-    }
-</style>
-
-<div class="amort-header">
-    <div>
-        <h1 style="color: white; margin: 0; font-size: 1.75rem;">Amortization Engine</h1>
-        <div style="color: var(--text-secondary); font-weight: 500; font-size: 0.9rem; margin-top: 5px; font-family: var(--font-data);">Automated Matching Principle & Deferred Expense Tracking</div>
+<div class="flex flex-col gap-8">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/60">
+        <div class="space-y-2">
+            <h1 class="text-4xl font-black tracking-tighter uppercase italic">Amortization Engine</h1>
+            <p class="text-muted-foreground text-sm font-medium flex items-center gap-2">
+                <i data-lucide="calendar-clock" class="w-4 h-4 text-sky-400"></i>
+                ASC-606 Compliance & Deferred Expense recognition for <span class="text-foreground font-bold">{{ business.name }}</span>
+            </p>
+        </div>
+        
+        <div class="text-right">
+            <p class="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Prepaid Asset Base</p>
+            <div class="text-4xl font-black font-mono text-sky-400">₹{{ total_prepaid|floatformat:2 }}</div>
+        </div>
     </div>
-    <div style="text-align: right;">
-        <div class="small" style="color: var(--text-secondary); font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Prepaid Asset Base</div>
-        <div style="font-size: 2.25rem; font-weight: 700; color: var(--gh-blue); font-family: var(--font-data);">₹{{ total_prepaid|floatformat:2 }}</div>
+
+    <!-- Analytics Hud -->
+    <div class="grid gap-6 lg:grid-cols-3">
+        <div class="lg:col-span-2 rounded-xl border bg-card p-6 shadow-sm space-y-6">
+            <h3 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
+                Recognition Progress (Top 5 Assets)
+            </h3>
+            <div class="h-[300px]">
+                <canvas id="amortChart"></canvas>
+            </div>
+        </div>
+
+        <div class="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+            <h3 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                System Logic
+            </h3>
+            <div class="space-y-4">
+                <div class="flex gap-3">
+                    <div class="w-6 h-6 rounded bg-emerald-500/10 flex items-center justify-center shrink-0">
+                        <i data-lucide="check" class="w-3 h-3 text-emerald-500"></i>
+                    </div>
+                    <p class="text-[11px] text-muted-foreground leading-relaxed">
+                        <span class="text-foreground font-bold uppercase tracking-tight">Auto-Matching:</span> The engine automatically creates monthly journal entries to shift value from Prepaid Assets to P&L Expenses.
+                    </p>
+                </div>
+                <div class="flex gap-3">
+                    <div class="w-6 h-6 rounded bg-blue-500/10 flex items-center justify-center shrink-0">
+                        <i data-lucide="shield-check" class="w-3 h-3 text-blue-500"></i>
+                    </div>
+                    <p class="text-[11px] text-muted-foreground leading-relaxed">
+                        <span class="text-foreground font-bold uppercase tracking-tight">Audit Locked:</span> All recognition cycles are cryptographically chained to the original purchase document.
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
-<h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; color: white;">Active Recognition Schedules</h3>
-{% if active_schedules %}
-    <div class="amort-grid">
-        {% for schedule in active_schedules %}
-            <div class="amort-card">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 600; font-size: 1.1rem; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ schedule.voucher.narration }}</div>
-                        <div class="small" style="color: var(--gh-blue); font-family: var(--font-data); margin-top: 4px;"># {{ schedule.voucher.voucher_number }}</div>
-                    </div>
-                    <span class="tag tag-info" style="margin-left: 10px;">Ongoing</span>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; padding: 1rem; background: var(--bg-header); border-radius: 4px; border: 1px solid var(--border-muted);">
-                    <div>
-                        <div class="small" style="font-weight: 700; color: var(--text-secondary);">ASSET CAP</div>
-                        <div style="font-weight: 600; color: var(--gh-green); font-family: var(--font-data);">₹{{ schedule.total_amount|floatformat:2 }}</div>
-                    </div>
-                    <div>
-                        <div class="small" style="font-weight: 700; color: var(--text-secondary);">DURATION</div>
-                        <div style="font-weight: 600; color: white; font-family: var(--font-data);">{{ schedule.periods }} Periods</div>
-                    </div>
-                </div>
-
-                {% with posted_count=schedule.movements.filter.is_posted.count %}
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: {% widthratio posted_count schedule.periods 100 %}%;"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="small" style="color: var(--text-secondary);">Sync: <span style="color: white; font-weight: 600;">{{ posted_count }} / {{ schedule.periods }}</span> posted</div>
-                    <div class="small" style="font-weight: 600; color: var(--accent);">{{ schedule.end_date|date:"M Y" }} END</div>
-                </div>
-                {% endwith %}
-
-                <div class="movement-list">
-                    {% for move in schedule.movements.all %}
-                        <div class="movement-item">
-                            <span style="font-weight: 600; color: white;">{{ move.date|date:"F Y" }}</span>
-                            <span style="color: var(--gh-blue);">₹{{ move.amount|floatformat:2 }}</span>
-                            <span>
-                                {% if move.is_posted %}
-                                    <span class="tag tag-success" style="font-size: 9px; padding: 1px 4px;">POSTED</span>
-                                {% else %}
-                                    <span class="tag" style="font-size: 9px; padding: 1px 4px; background: rgba(139, 148, 158, 0.1); color: var(--text-secondary);">PENDING</span>
-                                {% endif %}
-                            </span>
+    <!-- Active Grid -->
+    <div class="space-y-4">
+        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Active Recognition Streams</h3>
+        {% if active_schedules %}
+            <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {% for schedule in active_schedules %}
+                    <div class="rounded-xl border bg-card shadow-sm p-6 space-y-6 relative overflow-hidden group">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-sky-500"></div>
+                        
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="space-y-1">
+                                <h4 class="font-bold text-foreground truncate max-w-[200px]">{{ schedule.expense_account.name }}</h4>
+                                <div class="font-mono text-[10px] text-muted-foreground uppercase">#{{ schedule.voucher.voucher_number }}</div>
+                            </div>
+                            <span class="shadcn-tag shadcn-tag-info font-black text-[9px] uppercase">Ongoing</span>
                         </div>
-                    {% endfor %}
-                </div>
-            </div>
-        {% endfor %}
-    </div>
-{% else %}
-    <div class="card" style="text-align: center; padding: 5rem 2rem;">
-        <div style="font-size: 3rem; margin-bottom: 1.5rem;">📅</div>
-        <h4 style="color: white;">No Active Recognition Schedules identified</h4>
-        <div class="small" style="color: var(--text-secondary); max-width: 400px; margin: 10px auto;">Prepaid expenses, insurance, and annual subscriptions will appear here automatically after AI detection.</div>
-    </div>
-{% endif %}
 
-{% if completed_schedules %}
-    <h3 style="margin-top: 4rem; margin-bottom: 1.5rem; color: var(--text-secondary); font-size: 1rem;">Historical Schedules (Settled)</h3>
-    <div class="amort-grid" style="opacity: 0.6;">
-        {% for schedule in completed_schedules %}
-            <div class="amort-card" style="border-style: dashed;">
-                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <div style="font-weight: 600; color: white;">{{ schedule.voucher.narration|truncatechars:40 }}</div>
-                        <div class="small" style="font-family: var(--font-data); margin-top: 4px;">Fully Amortized sequence completed</div>
+                        <div class="grid grid-cols-2 gap-4 p-3 rounded-lg bg-muted/30 border">
+                            <div>
+                                <span class="text-[9px] font-black uppercase text-muted-foreground block mb-0.5">Asset Cap</span>
+                                <span class="text-sm font-black font-mono">₹{{ schedule.total_amount|floatformat:0 }}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[9px] font-black uppercase text-muted-foreground block mb-0.5">Cycles</span>
+                                <span class="text-sm font-black font-mono">{{ schedule.periods }} Mo.</span>
+                            </div>
+                        </div>
+
+                        {% with posted_count=schedule.movements.filter.is_posted.count %}
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-tighter">
+                                <span class="text-muted-foreground">Progression: {{ posted_count }}/{{ schedule.periods }}</span>
+                                <span class="text-sky-400">{% widthratio posted_count schedule.periods 100 %}%</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                <div class="h-full bg-sky-500 transition-all duration-700" style="width: {% widthratio posted_count schedule.periods 100 %}%"></div>
+                            </div>
+                        </div>
+                        {% endwith %}
+
+                        <div class="pt-4 border-t">
+                            <div class="max-h-[120px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                {% for move in schedule.movements.all %}
+                                <div class="flex items-center justify-between text-[11px] font-medium">
+                                    <span class="text-muted-foreground">{{ move.date|date:"M Y" }}</span>
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-mono font-bold">₹{{ move.amount|floatformat:0 }}</span>
+                                        {% if move.is_posted %}
+                                            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-500"></i>
+                                        {% else %}
+                                            <i data-lucide="clock" class="w-3.5 h-3.5 text-muted-foreground/30"></i>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="rounded-xl border border-dashed p-12 text-center bg-muted/10 opacity-60">
+                <div class="flex flex-col items-center gap-4 text-muted-foreground">
+                    <i data-lucide="calendar-x" class="w-12 h-12"></i>
+                    <div class="space-y-1">
+                        <p class="text-sm font-bold uppercase tracking-widest">Null Recognition State</p>
+                        <p class="text-[10px] font-medium uppercase tracking-[0.2em]">No prepaid artifacts identified in current FY</p>
                     </div>
                 </div>
-                <div style="margin-top: 1rem; font-weight: 600; font-family: var(--font-data); color: var(--gh-green);">₹{{ schedule.total_amount|floatformat:2 }} Total</div>
             </div>
-        {% endfor %}
+        {% endif %}
     </div>
-{% endif %}
 
+    <!-- Historical -->
+    {% if completed_schedules %}
+    <div class="space-y-4 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Historical Recognition Cycles</h3>
+        <div class="grid gap-4 md:grid-cols-3">
+            {% for schedule in completed_schedules %}
+            <div class="rounded-xl border bg-card p-4 flex items-center justify-between">
+                <div>
+                    <h5 class="text-xs font-bold text-foreground">{{ schedule.expense_account.name }}</h5>
+                    <p class="text-[10px] font-mono text-muted-foreground">TOTAL: ₹{{ schedule.total_amount|floatformat:0 }}</p>
+                </div>
+                <span class="shadcn-tag shadcn-tag-success text-[8px] uppercase">Settled</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const chartData = JSON.parse('{{ chart_data|safe }}');
+    const ctx = document.getElementById('amortChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        devicePixelRatio: window.devicePixelRatio || 2,
+        data: {
+            labels: chartData.labels,
+            datasets: [
+                {
+                    label: 'Recognized (Paid)',
+                    data: chartData.paid,
+                    backgroundColor: '#0ea5e9',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Prepaid (Remaining)',
+                    data: chartData.remaining,
+                    backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                    borderRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#64748b', font: { size: 10, weight: '700' }, usePointStyle: true }
+                }
+            },
+            scales: {
+                x: { stacked: true, grid: { display: false }, ticks: { color: '#64748b', font: { size: 9, weight: '700' } } },
+                y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 9, weight: '700' } } }
+            }
+        }
+    });
+</script>
 {% endblock %}

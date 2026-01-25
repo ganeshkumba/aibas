@@ -1,67 +1,95 @@
 {% extends 'core/base.html' %}
 
+{% block title %}The Ledger | Business Network{% endblock %}
+
 {% block content %}
-<div style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border-default); padding-bottom: 1.5rem;">
-  <div>
-      <h1 style="margin: 0; font-size: 1.75rem;">Business Network</h1>
-      <p style="color: var(--text-secondary); margin-top: 5px; font-size: 0.95rem;">Active repositories and financial entities under your management.</p>
-  </div>
-  <a href="{% url 'core:business_create' %}" class="btn">
-      <i>➕</i> Start New Entity
-  </a>
-</div>
-
-<div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
-  {% for b in businesses %}
-    <div class="card">
-      <div class="card-header">
-          <div style="display: flex; align-items: center; gap: 8px;">
-              <i>🏢</i>
-              <a href="{% url 'core:business_detail' b.id %}" class="repo-name" style="text-decoration: none; font-size: 1rem;">{{ b.name }}</a>
-              <span class="tag tag-info" style="font-size: 0.6rem;">Public Entity</span>
-          </div>
-          <div class="small" style="font-family: var(--font-data);">Created {{ b.created_at | date:"M Y" }}</div>
-      </div>
-      
-      <div class="card-body">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div class="small" style="color: var(--text-secondary); font-family: var(--font-data);">
-                <span style="color: var(--text-main); font-weight: 600;">GSTIN:</span> {{ b.gstin | default:"N/A" }} &nbsp;•&nbsp;
-                <span style="color: var(--text-main); font-weight: 600;">PAN:</span> {{ b.pan | default:"N/A" }}
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <a href="{% url 'core:business_detail' b.id %}" class="btn btn-secondary" style="font-size: 0.8rem; padding: 4px 12px;">
-                    Open Hub
-                </a>
-            </div>
-          </div>
-
-          <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-muted); display: flex; gap: 1.5rem; align-items: center;">
-            <a href="{% url 'core:upload_document' b.id %}" class="small" style="color: var(--gh-blue); text-decoration: none; display: flex; align-items: center; gap: 5px;">
-              <i>📤</i> Upload Document
-            </a>
-            <a href="{% url 'core:documents_list' b.id %}" class="small" style="color: var(--text-secondary); text-decoration: none; display: flex; align-items: center; gap: 5px;">
-              <i>📂</i> Audit Vault ({{ b.documents.count }})
-            </a>
-            <div style="flex-grow: 1;"></div>
-            <div style="display: flex; align-items: center; gap: 5px;" class="small">
-                <span style="width: 10px; height: 10px; border-radius: 50%; background: #f1e05a;"></span>
-                <span>GAAP Compliant</span>
-            </div>
-          </div>
-      </div>
+<div class="flex flex-col gap-8">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-border/60">
+        <div class="space-y-1">
+            <h1 class="text-3xl font-bold tracking-tight">Business Network</h1>
+            <p class="text-muted-foreground text-sm max-w-lg">
+                Orchestrate your financial landscape. Managed active repositories and monitor real-time accounting velocity.
+            </p>
+        </div>
+        <a href="{% url 'core:business_create' %}" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 gap-2 shadow-lg shadow-white/5">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Register New Entity
+        </a>
     </div>
-  {% empty %}
-    <div class="card" style="text-align: center; padding: 5rem 2rem; border-style: dashed;">
-      <div style="font-size: 3rem; margin-bottom: 1.5rem;">🏢</div>
-      <h2 style="font-weight: 500; color: white;">Your business network is empty.</h2>
-      <p style="color: var(--text-secondary); margin-bottom: 2rem; max-width: 400px; margin-left: auto; margin-right: auto;">
-          Start by registering your first business entity to begin automated bookkeeping and forensic auditing.
-      </p>
-      <a href="{% url 'core:business_create' %}" class="btn">
-          Create First Repository
-      </a>
+
+    <!-- Stats Overview (Optional, could be aggregated) -->
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-xl border bg-card text-card-foreground shadow">
+            <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 class="tracking-tight text-xs font-semibold uppercase text-muted-foreground">Active Units</h3>
+                <i data-lucide="building-2" class="w-4 h-4 text-blue-400"></i>
+            </div>
+            <div class="p-6 pt-0">
+                <div class="text-2xl font-bold">{{ businesses.count }}</div>
+                <p class="text-[10px] text-muted-foreground mt-1">Managed repositories</p>
+            </div>
+        </div>
+        <!-- Add more top-level stats if needed -->
     </div>
-  {% endfor %}
+
+    <!-- Businesses Grid -->
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {% for b in businesses %}
+        <div class="group relative flex flex-col rounded-xl border bg-card text-card-foreground shadow transition-all hover:shadow-2xl hover:shadow-white/5 hover:-translate-y-1">
+            <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20">
+                        <i data-lucide="briefcase" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-lg hover:text-blue-400 transition-colors">
+                            <a href="{% url 'core:business_detail' b.id %}" class="after:absolute after:inset-0">{{ b.name }}</a>
+                        </h3>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground">
+                                {{ b.gstin|default:"No GSTIN" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6 pt-0 flex-1 space-y-4">
+                <div class="grid grid-cols-2 gap-4 text-xs">
+                    <div class="space-y-1">
+                        <p class="text-muted-foreground font-medium">Audit Vault</p>
+                        <p class="font-mono text-primary/80">{{ b.documents.count }} items</p>
+                    </div>
+                    <div class="space-y-1">
+                        <p class="text-muted-foreground font-medium">Financial Year</p>
+                        <p class="font-mono text-primary/80">FY 2024-25</p>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <span class="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Healthy Connectivity</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform"></i>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-20 flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-white/[0.02]">
+            <div class="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mb-6">
+                <i data-lucide="search-x" class="w-10 h-10 text-muted-foreground"></i>
+            </div>
+            <h2 class="text-xl font-semibold mb-2">No entities found</h2>
+            <p class="text-muted-foreground text-sm max-w-sm text-center mb-8">
+                Your business network is currently empty. Start by registering your first repository for AI-assisted bookkeeping.
+            </p>
+            <a href="{% url 'core:business_create' %}" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-8 py-2">
+                Create First Entity
+            </a>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}

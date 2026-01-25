@@ -1,52 +1,88 @@
 {% extends 'core/base.html' %}
+
+{% block title %}Deposit Artifacts | The Ledger{% endblock %}
+
 {% block content %}
-<div class="card" style="max-width: 600px; margin: 0 auto;">
-  <h2 style="margin-bottom: 0.5rem;">Deposit Documents</h2>
-  <div class="small" style="font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 2rem;">
-    Entity: {{ business.name }}
-  </div>
+<div class="h-full flex items-center justify-center p-4">
+    <div class="w-full max-w-[500px] space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
+        <!-- Compact Header -->
+        <div class="flex items-center gap-4 border-b pb-4">
+            <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-black text-xl shadow-lg">
+                D
+            </div>
+            <div class="space-y-0.5 text-left">
+                <h1 class="text-xl font-bold tracking-tight">Deposit Artifacts</h1>
+                <p class="text-[9px] text-muted-foreground uppercase tracking-[0.2em] font-black">Entity: {{ business.name }}</p>
+            </div>
+        </div>
 
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
+        <div class="rounded-lg border bg-card text-card-foreground shadow-xl overflow-hidden">
+            <div class="p-6">
+                <form method="post" enctype="multipart/form-data" class="space-y-4">
+                    {% csrf_token %}
 
-    <div style="margin-bottom: 1.5rem;">
-      <label style="font-weight: 700; font-size: 0.85rem; color: var(--text-secondary);">CLASSIFICATION</label>
-      {{ form.doc_type }}
+                    <div class="space-y-1.5">
+                        <label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Classification</label>
+                        <div class="relative group">
+                            <i data-lucide="layers" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors"></i>
+                            {{ form.doc_type }}
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Upload Zone</label>
+                        <div class="group relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg bg-muted/10 hover:bg-muted/20 hover:border-primary/50 transition-all cursor-pointer">
+                            <label for="id_file" class="absolute inset-0 cursor-pointer flex items-center justify-center p-4 gap-3">
+                                <div class="w-10 h-10 rounded-full bg-primary/5 border border-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                    <i data-lucide="file-up" class="w-5 h-5"></i>
+                                </div>
+                                <div class="space-y-0 text-left">
+                                    <p class="text-[11px] font-bold tracking-tight">Select Artifacts</p>
+                                    <p class="text-[8px] text-muted-foreground uppercase font-black">PDF, PNG, JPG (MAX 10MB)</p>
+                                </div>
+                                <input type="file" name="file" id="id_file" multiple accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp" required class="hidden">
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="inline-flex items-center justify-center rounded-md text-xs font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-full mt-2 shadow-lg active:scale-95 gap-2 transition-all">
+                        <i data-lucide="brain-circuit" class="w-3.5 h-3.5 opacity-50"></i>
+                        Start Forensic Extraction
+                    </button>
+                </form>
+            </div>
+            
+            <div class="p-4 bg-blue-500/[0.02] border-t border-blue-500/10 flex gap-3 text-left">
+                <i data-lucide="info" class="w-4 h-4 text-blue-400 shrink-0 mt-0.5"></i>
+                <p class="text-[9px] text-muted-foreground leading-snug">
+                    <span class="text-blue-400 font-black uppercase tracking-widest">Multi-Node Trace:</span> Batch processing up to 50 concurrent artifacts mapped to verifiable hash-chains.
+                </p>
+            </div>
+        </div>
     </div>
-
-    <div style="margin-bottom: 2rem; padding: 2rem; border: 2px dashed var(--border-classic); border-radius: 12px; text-align: center; background: #fafbfc;">
-      <label for="id_file" style="cursor: pointer; display: block;">
-        <div style="font-size: 2.5rem; margin-bottom: 1rem;">📁</div>
-        <div style="font-weight: 700; color: var(--fb-blue); margin-bottom: 0.5rem;">Click to select or drag & drop</div>
-        <div class="small">PDF, PNG, JPG, TIFF, BMP (MAX 10MB)</div>
-        <input type="file" name="file" id="id_file" multiple accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp" required style="display: none;">
-      </label>
-    </div>
-
-    <button type="submit" class="btn" style="width: 100%; padding: 1rem; font-size: 1rem;">Initialize AI Extraction</button>
-  </form>
-
-  <div style="margin-top: 2rem; padding: 1.25rem; background: #e7f3ff; border-radius: 8px; border: 1px solid #1877f2;">
-    <div style="display: flex; gap: 0.75rem;">
-      <div style="font-size: 1.2rem;">⚡</div>
-      <div class="small" style="color: #1a2a4b; font-weight: 500;">
-        <strong>Multi-File Support:</strong> You can select up to 50 documents at once. Our AI will parallel-process each record and map it to the corresponding ledger account.
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
-  // Simple listener to show filename after selection
-  const fileInput = document.getElementById('id_file');
-  fileInput.addEventListener('change', (e) => {
-    const count = e.target.files.length;
-    const label = e.target.closest('label').querySelector('.small');
-    if (count > 0) {
-      label.textContent = `Ready to upload ${count} document(s)`;
-      label.style.color = '#10b981';
-      label.style.fontWeight = '800';
-    }
-  });
+    document.addEventListener('DOMContentLoaded', () => {
+        const fileInput = document.getElementById('id_file');
+        const uploadZone = fileInput.closest('.group');
+        const labelMainText = uploadZone.querySelector('.text-\\[11px\\]');
+        
+        fileInput.addEventListener('change', (e) => {
+            const count = e.target.files.length;
+            if (count > 0) {
+                labelMainText.textContent = `Queued ${count} artifacts`;
+                labelMainText.classList.add('text-emerald-500');
+                uploadZone.classList.add('border-emerald-500/50', 'bg-emerald-500/5');
+            }
+        });
+
+        const select = document.querySelector('select');
+        if (select) {
+            select.className = 'flex h-9 w-full rounded-md border border-input bg-background px-8 py-1.5 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+        }
+        
+        lucide.createIcons();
+    });
 </script>
 {% endblock %}

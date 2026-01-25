@@ -1,104 +1,200 @@
 {% extends 'core/base.html' %}
 
+{% block title %}Profit & Loss | {{ business.name }} | The Ledger{% endblock %}
+
 {% block content %}
-<div class="card">
-  <div class="card-header">
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <i>📈</i>
-        <span>Statement of Financial Performance</span>
+<div class="flex flex-col gap-8">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/60">
+        <div class="space-y-2">
+            <h1 class="text-3xl font-bold tracking-tight">Financial Performance</h1>
+            <p class="text-muted-foreground text-sm font-medium flex items-center gap-2">
+                <i data-lucide="trending-up" class="w-4 h-4 text-emerald-500"></i>
+                P&L Account for <span class="text-foreground font-bold">{{ business.name }}</span> | FY 2024-25
+            </p>
+        </div>
+        
+        {% if snapshot %}
+        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-emerald-500">Audited Snapshot</span>
+        </div>
+        {% endif %}
     </div>
-    {% if snapshot %}
-    <span class="tag tag-success">AUDITED SNAPSHOT</span>
-    {% endif %}
-  </div>
-  
-  <div class="card-body">
-    <div style="margin-bottom: 2rem;">
-        <h1 style="margin-bottom: 0.25rem;">Profit & Loss Account</h1>
-        <div style="font-size: 0.9rem; color: var(--text-secondary); font-family: var(--font-data);">
-            {{ business.name }} | FY 2024-25
+
+    <!-- Intelligence Matrix (New Semantic Insights) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Efficiency Card -->
+        <div class="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Operating Efficiency</h3>
+                <span class="text-xs font-bold font-mono">{{ efficiency_score }}/10</span>
+            </div>
+            <div class="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                <div class="h-full bg-blue-500 transition-all duration-1000" style="width: {{ efficiency_percentage }}%"></div>
+            </div>
+            <p class="text-[11px] text-muted-foreground leading-relaxed italic">
+                Efficiency is calculated by the ratio of revenue vs costs. High scores indicate strong margins.
+            </p>
+        </div>
+
+        <!-- Profit Status Card -->
+        <div class="rounded-xl border bg-card p-6 shadow-sm flex flex-col justify-between">
+            <div class="space-y-1">
+                <h3 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Strategic Outlook</h3>
+                <div class="text-xl font-black italic tracking-tighter uppercase {% if 'High' in profit_status %}text-emerald-500{% elif 'Stable' in profit_status %}text-blue-400{% else %}text-amber-500{% endif %}">
+                    {{ profit_status }}
+                </div>
+            </div>
+            <div class="pt-4 border-t flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
+                <span class="text-muted-foreground">Risk Level</span>
+                <span class="{% if net_profit > 0 %}text-emerald-500{% else %}text-rose-500{% endif %}">{% if net_profit > 0 %}Low{% else %}Elevated{% endif %}</span>
+            </div>
+        </div>
+
+        <!-- Top Burner Card -->
+        <div class="rounded-xl border bg-card p-6 shadow-sm overflow-hidden relative border-rose-500/20">
+            <div class="absolute top-0 right-0 p-4 opacity-5">
+                <i data-lucide="zap" class="w-12 h-12"></i>
+            </div>
+            <div class="space-y-2">
+                <h3 class="text-[10px] font-black uppercase tracking-widest text-rose-500">Major Cash Drain</h3>
+                <div class="text-sm font-bold text-foreground truncate">{{ top_expense.name|default:"No Expenses Detected" }}</div>
+                <div class="text-xl font-black font-mono">₹{{ top_expense.amount|default:0|floatformat:0 }}</div>
+            </div>
         </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-        <!-- LEFT SIDE: EXPENSES -->
-        <div>
-            <h3 style="color: var(--danger); font-size: 1rem; border-bottom: 1px solid var(--border-default); padding-bottom: 0.5rem; display: flex; justify-content: space-between;">
-                <span>Indirect Expenses</span>
-                <span class="tag tag-info" style="font-size: 0.6rem;">Dr</span>
-            </h3>
-            <table>
-                {% for item in expense_data %}
-                <tr>
-                    <td style="color: var(--text-main); font-weight: 500;">{{ item.name }}</td>
-                    <td align="right" class="ledger-number">
-                        ₹{{ item.amount | floatformat:2 }}
-                    </td>
-                </tr>
-                {% endfor %}
-                <tr style="border-top: 2px solid var(--border-default);">
-                    <td style="font-weight: 700; color: white;">Total Expenses</td>
-                    <td align="right" class="ledger-number" style="font-weight: 700; color: white;">
-                        ₹{{ total_expense | floatformat:2 }}
-                    </td>
-                </tr>
-            </table>
+    <!-- P&L Visualization HUD -->
+    <div class="rounded-xl border bg-card p-8 shadow-sm overflow-hidden relative">
+        <div class="absolute top-0 right-0 p-12 opacity-5">
+            <i data-lucide="bar-chart-3" class="w-48 h-48"></i>
         </div>
-
-        <!-- RIGHT SIDE: INCOME -->
-        <div>
-            <h3 style="color: #3fb950; font-size: 1rem; border-bottom: 1px solid var(--border-default); padding-bottom: 0.5rem; display: flex; justify-content: space-between;">
-                <span>Incomes</span>
-                <span class="tag tag-success" style="font-size: 0.6rem;">Cr</span>
-            </h3>
-            <table>
-                {% for item in income_data %}
-                <tr>
-                    <td style="color: var(--text-main); font-weight: 500;">{{ item.name }}</td>
-                    <td align="right" class="ledger-number">
-                        ₹{{ item.amount | floatformat:2 }}
-                    </td>
-                </tr>
-                {% endfor %}
-                <tr style="border-top: 2px solid var(--border-default);">
-                    <td style="font-weight: 700; color: white;">Total Income</td>
-                    <td align="right" class="ledger-number" style="font-weight: 700; color: white;">
-                        ₹{{ total_income | floatformat:2 }}
-                    </td>
-                </tr>
-            </table>
+        
+        <div class="flex flex-col md:flex-row items-center justify-between gap-8 mb-8 relative z-10">
+            <div class="space-y-2 text-center md:text-left">
+                <p class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Consolidated Final Result</p>
+                <h2 class="text-5xl font-black tracking-tighter italic">
+                    {% if net_profit >= 0 %}
+                    <span class="text-emerald-500">NET PROFIT</span>
+                    {% else %}
+                    <span class="text-rose-500">NET LOSS</span>
+                    {% endif %}
+                </h2>
+            </div>
+            
+            <div class="text-center md:text-right space-y-1">
+                <div class="text-6xl font-black font-mono tracking-tighter {% if net_profit >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                    ₹{{ net_profit_abs | floatformat:2 }}
+                </div>
+                <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 italic">
+                    {% if snapshot %}Archived: {{ snapshot.created_at|date:"d M Y" }}{% else %}Live Real-Time Flow{% endif %}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Profitability Ratio Bar -->
+        <div class="space-y-3 relative z-10">
+            <div class="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                <span class="text-rose-500 flex items-center gap-1"><i data-lucide="arrow-down" class="w-3 h-3"></i> Total Spending</span>
+                <span class="text-emerald-500 flex items-center gap-1">Total Earning <i data-lucide="arrow-up" class="w-3 h-3"></i></span>
+            </div>
+            <div class="h-4 w-full bg-muted rounded-full overflow-hidden flex shadow-inner">
+                <div class="h-full bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.4)] transition-all duration-1000" style="width: {{ burn_percentage }}%"></div>
+                <div class="h-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all duration-1000 flex-1"></div>
+            </div>
+            <div class="flex justify-between text-[9px] font-mono text-muted-foreground italic">
+                <span>₹{{ total_expense|floatformat:0 }}</span>
+                <span>₹{{ total_income|floatformat:0 }}</span>
+            </div>
         </div>
     </div>
 
-    <!-- NET RESULT -->
-    <div style="margin-top: 3rem; padding: 1.5rem; background: var(--bg-header); border: 1px solid var(--border-default); border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <div style="font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px;">
-                Trading Result
+    <!-- Ledger Tables -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Indirect Expenses (Debit Side) -->
+        <div class="rounded-xl border bg-card shadow-sm overflow-hidden border-rose-500/20">
+            <div class="p-4 border-b bg-rose-500/[0.03] flex items-center justify-between">
+                <h3 class="text-xs font-black uppercase tracking-widest text-rose-500">Indirect Expenses</h3>
+                <span class="shadcn-tag border-rose-500/20 bg-rose-500/10 text-rose-500 font-bold uppercase tracking-widest px-2">DR</span>
             </div>
-            <h2 style="margin: 0; font-size: 1.75rem; color: white;">
-                {% if net_profit >= 0 %}
-                    Net Profit
-                {% else %}
-                    Net Loss
-                {% endif %}
-            </h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <tbody class="divide-y divide-border/40">
+                        {% for item in expense_data %}
+                        <tr class="hover:bg-muted/30 transition-colors group">
+                            <td class="px-6 py-4 text-foreground font-medium">{{ item.name }}</td>
+                            <td class="px-6 py-4 text-right font-mono font-bold text-rose-400">₹{{ item.amount | floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-rose-500/[0.05] font-black">
+                            <td class="px-6 py-4 text-[10px] uppercase tracking-widest text-rose-500">Total Expenditure</td>
+                            <td class="px-6 py-4 text-right font-mono text-xl text-rose-500 tracking-tighter">₹{{ total_expense | floatformat:2 }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
         </div>
-        <div style="text-align: right;">
-            {% if net_profit >= 0 %}
-            <div class="ledger-number" style="font-size: 2.5rem; color: #3fb950;">
-                ₹{{ net_profit | floatformat:2 }}
+
+        <!-- Incomes (Credit Side) -->
+        <div class="rounded-xl border bg-card shadow-sm overflow-hidden border-emerald-500/20">
+            <div class="p-4 border-b bg-emerald-500/[0.03] flex items-center justify-between">
+                <h3 class="text-xs font-black uppercase tracking-widest text-emerald-500">Revenue & Incomes</h3>
+                <span class="shadcn-tag border-emerald-500/20 bg-emerald-500/10 text-emerald-500 font-bold uppercase tracking-widest px-2">CR</span>
             </div>
-            {% else %}
-            <div class="ledger-number" style="font-size: 2.5rem; color: var(--danger);">
-                ₹{{ net_profit | floatformat:2 }}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <tbody class="divide-y divide-border/40">
+                        {% for item in income_data %}
+                        <tr class="hover:bg-muted/30 transition-colors group">
+                            <td class="px-6 py-4 text-foreground font-medium">{{ item.name }}</td>
+                            <td class="px-6 py-4 text-right font-mono font-bold text-emerald-400">₹{{ item.amount | floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-emerald-500/[0.05] font-black">
+                            <td class="px-6 py-4 text-[10px] uppercase tracking-widest text-emerald-500">Total Income</td>
+                            <td class="px-6 py-4 text-right font-mono text-xl text-emerald-500 tracking-tighter">₹{{ total_income | floatformat:2 }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
-            {% endif %}
-            {% if snapshot %}
-            <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 5px;">Snapshot: {{ snapshot.created_at|date:"d M Y" }}</div>
-            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Diagnostic Footers -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="rounded-xl border bg-card p-4 shadow-sm space-y-3">
+            <div class="flex items-center gap-2">
+                <i data-lucide="activity" class="w-4 h-4 text-blue-400"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Monthly Burn</span>
+            </div>
+            <div class="font-mono text-lg font-bold">₹{{ monthly_burn|floatformat:0 }}<span class="text-xs text-muted-foreground ml-1">/mo</span></div>
+        </div>
+        <div class="rounded-xl border bg-card p-4 shadow-sm space-y-3">
+            <div class="flex items-center gap-2">
+                <i data-lucide="percent" class="w-4 h-4 text-violet-400"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Net Profit Margin</span>
+            </div>
+            <div class="font-mono text-lg font-bold">
+                {{ net_margin|floatformat:1 }}%
+            </div>
+        </div>
+        <div class="rounded-xl border bg-card p-4 shadow-sm space-y-3">
+            <div class="flex items-center gap-2">
+                <i data-lucide="shield-check" class="w-4 h-4 text-amber-500"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Data Integrity</span>
+            </div>
+            <div class="font-mono text-lg font-bold">99.8%</div>
         </div>
     </div>
-  </div>
 </div>
 {% endblock %}

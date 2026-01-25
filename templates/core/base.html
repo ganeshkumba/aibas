@@ -1,481 +1,405 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Ledger | Enterprise Accounting</title>
+    <title>{% block title %}The Ledger | Next-Gen Accounting{% endblock %}</title>
+    
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            /* GitHub Dark Aesthetic */
-            --bg-canvas: #0d1117;
-            --bg-card: #161b22;
-            --bg-header: #010409;
-            --border-default: #30363d;
-            --border-muted: #21262d;
-            --text-main: #c9d1d9;
-            --text-secondary: #8b949e;
-            --gh-green: #238636;
-            --gh-green-hover: #2ea043;
-            --gh-blue: #58a6ff;
-            --gh-orange: #d16d0e;
-            --accent: #bc8cff;
-            --danger: #f85149;
-            
-            --font-ui: 'Space Grotesk', sans-serif;
-            --font-data: 'JetBrains Mono', monospace;
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (Play CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(240 3.7% 15.9%)",
+                        input: "hsl(240 3.7% 15.9%)",
+                        ring: "hsl(240 4.9% 83.9%)",
+                        background: "hsl(240 10% 3.9%)",
+                        foreground: "hsl(0 0% 98%)",
+                        primary: {
+                            DEFAULT: "hsl(0 0% 98%)",
+                            foreground: "hsl(240 5.9% 10%)",
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(240 3.7% 15.9%)",
+                            foreground: "hsl(0 0% 98%)",
+                        },
+                        destructive: {
+                            DEFAULT: "hsl(0 62.8% 30.6%)",
+                            foreground: "hsl(0 0% 98%)",
+                        },
+                        muted: {
+                            DEFAULT: "hsl(240 3.7% 15.9%)",
+                            foreground: "hsl(240 5% 64.9%)",
+                        },
+                        accent: {
+                            DEFAULT: "hsl(240 3.7% 15.9%)",
+                            foreground: "hsl(0 0% 98%)",
+                        },
+                        popover: {
+                            DEFAULT: "hsl(240 10% 3.9%)",
+                            foreground: "hsl(0 0% 98%)",
+                        },
+                        card: {
+                            DEFAULT: "hsl(240 10% 3.9%)",
+                            foreground: "hsl(0 0% 98%)",
+                        },
+                    },
+                    borderRadius: {
+                        lg: "0.5rem",
+                        md: "calc(0.5rem - 2px)",
+                        sm: "calc(0.5rem - 4px)",
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                }
+            }
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: var(--font-ui);
-            background-color: var(--bg-canvas);
-            color: var(--text-main);
-            min-height: 100vh;
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* Repository-Style Header */
-        nav {
-            background-color: var(--bg-header);
-            border-bottom: 1px solid var(--border-default);
-            padding: 1rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .nav-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: white;
-            text-decoration: none;
-            letter-spacing: -0.5px;
-        }
-
-        .logo-icon {
-            width: 32px;
-            height: 32px;
-            background: #fff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #000;
-            font-size: 1.2rem;
-        }
-
-        .logo span {
-            font-size: 0.65rem;
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--gh-blue);
-            padding: 2px 8px;
-            border-radius: 20px;
-            border: 1px solid var(--gh-blue);
-            text-transform: uppercase;
-            font-weight: 800;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 2rem;
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            gap: 2.5rem;
-        }
-
-        /* GitHub Sidebar Navigation */
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .sidebar-section {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            padding: 1rem 0.75rem 0.5rem;
-            font-weight: 600;
-        }
-
-        .sidebar a {
-            text-decoration: none;
-            color: var(--text-main);
-            font-size: 0.9rem;
-            padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: background 0.1s;
-        }
-
-        .sidebar a:hover {
-            background-color: var(--bg-card);
-        }
-
-        .sidebar a.active {
-            background-color: rgba(56, 139, 253, 0.1);
-            color: var(--gh-blue);
-            font-weight: 600;
-            border-left: 3px solid var(--gh-blue);
-            border-radius: 2px 6px 6px 2px;
-        }
-
-        .sidebar i { width: 16px; text-align: center; }
-
-        /* GitHub-style Cards & Layout */
-        .main-content {
-            min-width: 0;
-        }
-
-        .card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-default);
-            border-radius: 6px;
-            margin-bottom: 2rem;
-            overflow: hidden;
-        }
-
-        .card-header {
-            background-color: var(--bg-header);
-            border-bottom: 1px solid var(--border-default);
-            padding: 0.75rem 1.25rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-body {
-            padding: 1.25rem;
-        }
-
-        /* Typography & Data */
-        h1, h2, h3 {
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: white;
-        }
-
-        .ledger-number {
-            font-family: var(--font-data);
-            font-size: 0.95rem;
-            color: var(--gh-blue);
-        }
-
-        .currency {
-            font-family: var(--font-data);
-            font-weight: 500;
-        }
-
-        /* Buttons matching GH Dark */
-        .btn {
-            background-color: var(--gh-green);
-            color: white;
-            padding: 5px 16px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            border: 1px solid rgba(240, 246, 252, 0.1);
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: 0.2s;
-        }
-
-        .btn:hover {
-            background-color: var(--gh-green-hover);
-        }
-
-        .btn-secondary {
-            background-color: #21262d;
-            border: 1px solid var(--border-default);
-            color: var(--gh-blue);
-        }
-
-        .btn-secondary:hover {
-            background-color: #30363d;
-            border-color: #8b949e;
-        }
-
-        .btn-danger {
-            background-color: #21262d;
-            color: var(--danger);
-        }
-
-        .btn-danger:hover {
-            background-color: var(--danger);
-            color: white;
-        }
-
-        /* Labels & Status Tags */
-        .tag {
-            font-family: var(--font-data);
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            border-radius: 2em;
-            font-weight: 600;
-            border: 1px solid transparent;
-        }
-
-        .tag-info { 
-            background: rgba(56, 139, 253, 0.1); 
-            color: var(--gh-blue); 
-            border-color: rgba(56, 139, 253, 0.4);
-        }
-
-        .tag-success { 
-            background: rgba(35, 134, 54, 0.1); 
-            color: #3fb950; 
-            border-color: rgba(35, 134, 54, 0.4);
-        }
-
-        .tag-warning {
-            background: rgba(210, 153, 34, 0.1);
-            color: #d29922;
-            border-color: rgba(210, 153, 34, 0.4);
-        }
-
-        /* Nav Links */
-        .nav-links {
-            display: flex;
-            gap: 1.25rem;
-            align-items: center;
-        }
-
-        .nav-links a {
-            color: var(--text-main);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .nav-links a:hover {
-            color: var(--gh-blue);
-        }
-
-        /* Alerts Table-style */
-        .alert-gh {
-            background: rgba(56, 139, 253, 0.1);
-            border: 1px solid rgba(56, 139, 253, 0.4);
-            border-radius: 6px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            color: var(--gh-blue);
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .alert-gh::before {
-            content: '💡';
-        }
-
-        /* User Profile in Sidebar */
-        .user-pill {
-            padding: 12px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-default);
-            border-radius: 6px;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            background: var(--gh-orange);
-            color: white;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-family: var(--font-data);
+    </script>
+    <style type="text/tailwindcss">
+        @layer base {
+            * {
+                @apply border-border;
+            }
+            body {
+                @apply bg-background text-foreground font-sans antialiased;
+            }
         }
         
-        /* Monospace Table Fixes */
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        .glass {
+            @apply bg-background/50 backdrop-blur-xl border-border/50;
+        }
+
+        .shadcn-card {
+            @apply rounded-xl border bg-card text-card-foreground shadow;
+        }
+
+        .sidebar-item {
+            @apply flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground;
+        }
+
+        .sidebar-item.active {
+            @apply bg-accent text-accent-foreground shadow-sm;
+        }
+
+        /* --- Shadcn Global Element Styles --- */
+        
+        /* Shadcn Tag / Badge */
+        .shadcn-tag {
+            @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+        }
+        .shadcn-tag-success { @apply border-emerald-500/20 bg-emerald-500/10 text-emerald-500; }
+        .shadcn-tag-error { @apply border-rose-500/20 bg-rose-500/10 text-rose-500; }
+        .shadcn-tag-info { @apply border-sky-500/20 bg-sky-500/10 text-sky-500; }
+        .shadcn-tag-warning { @apply border-amber-500/20 bg-amber-500/10 text-amber-500; }
+
+        /* Shadcn Checkbox Mock */
+        input[type="checkbox"] {
+            @apply h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 accent-primary;
+        }
+
+        /* Forms Styling Utility Class */
+        .shadcn-input-base {
+            @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+        }
+
+        canvas {
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+        }
+
+        /* --- Atomic Neon Cursor --- */
+        #cursor-glow {
+            @apply fixed top-0 left-0 w-[60px] h-[60px] pointer-events-none z-[9999];
+            background: radial-gradient(circle, rgba(0, 242, 255, 0.25) 0%, rgba(0, 242, 255, 0) 70%);
+            transform: translate(-50%, -50%);
+            transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.4s ease;
         }
         
-        th {
-            text-align: left;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            border-bottom: 1px solid var(--border-default);
-            padding: 8px 12px;
+        /* Shift to Magenta on interaction */
+        .cursor-hover #cursor-glow {
+            background: radial-gradient(circle, rgba(255, 0, 242, 0.35) 0%, rgba(255, 0, 242, 0) 70%);
+            width: 100px;
+            height: 100px;
         }
         
-        td {
-            padding: 12px;
-            border-bottom: 1px solid var(--border-muted);
-            font-size: 0.9rem;
+        /* Optional: Add a tiny white dot at the center for precision */
+        #cursor-glow::after {
+            content: '';
+            @apply absolute top-1/2 left-1/2 w-1 h-1 bg-white rounded-full opacity-40;
+            transform: translate(-50%, -50%);
         }
 
-        tr:hover td {
-            background: rgba(255, 255, 255, 0.02);
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
-
-        .repo-name {
-            color: var(--gh-blue);
-            font-weight: 600;
-            font-family: var(--font-data);
+        ::-webkit-scrollbar-track {
+            @apply bg-transparent;
         }
-
-        /* Forms & Inputs */
-        input[type="text"], input[type="email"], input[type="password"], textarea, select {
-            width: 100%;
-            background-color: var(--bg-canvas);
-            border: 1px solid var(--border-default);
-            color: var(--text-main);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-family: var(--font-data);
-            font-size: 0.9rem;
-            margin-top: 5px;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        input:focus, textarea:focus, select:focus {
-            border-color: var(--gh-blue);
-            box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.3);
-        }
-
-        label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: white;
-            display: block;
+        ::-webkit-scrollbar-thumb {
+            @apply bg-muted rounded-full;
         }
     </style>
+
+    {% block extra_head %}{% endblock %}
 </head>
-
-<body>
-    <nav>
-        <div class="nav-container">
-            <a href="{% url 'core:index' %}" class="logo">
-                <div class="logo-icon">L</div>
-                The Ledger <span>Pro-Mode</span>
+<body class="dark h-screen flex flex-col overflow-hidden relative">
+    <!-- Cursor Glow -->
+    <div id="cursor-glow"></div>
+    <!-- Navbar -->
+    <header class="h-16 border-b flex items-center justify-between px-6 glass sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'core:index' %}" class="flex items-center gap-3 group">
+                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-lg group-hover:rotate-12 transition-transform">
+                    L
+                </div>
+                <span class="font-bold text-xl tracking-tight">The Ledger</span>
+                <span class="text-[10px] uppercase font-black bg-white/10 text-white px-1.5 py-0.5 rounded border border-white/20 ml-1">v2.0</span>
             </a>
-            <div class="nav-links">
-                {% if user.is_authenticated %}
-                    <a href="{% url 'core:index' %}">Timeline</a>
-                    <a href="#">Audit Logs</a>
-                    <form action="{% url 'core:logout' %}" method="post" style="display: inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-secondary" style="padding: 3px 12px; font-size: 0.8rem;">Sign Out</button>
-                    </form>
-                {% else %}
-                    <a href="{% url 'core:login' %}">Log In</a>
-                    <a href="{% url 'core:signup' %}" class="btn">Sign Up</a>
-                {% endif %}
-            </div>
         </div>
-    </nav>
 
-    <div class="container">
-        <div class="sidebar">
+        <div class="flex items-center gap-4">
             {% if user.is_authenticated %}
-                <div class="user-pill">
-                    <div class="user-avatar">
-                        {{ user.email | slice:":1" | upper }}
+                <div class="hidden md:flex items-center gap-6 text-sm text-muted-foreground mr-6">
+                    <a href="{% url 'core:index' %}" class="hover:text-foreground transition-colors">Timeline</a>
+                    <a href="#" class="hover:text-foreground transition-colors">Audit Vault</a>
+                    <a href="#" class="hover:text-foreground transition-colors">System Status</a>
+                </div>
+                
+                <div class="flex items-center gap-3 pl-6 border-l border-border/60">
+                    <div class="hidden xl:flex flex-col items-end mr-3">
+                        <span class="text-xs font-bold truncate max-w-[150px] text-foreground">{{ user.email }}</span>
+                        <span class="text-[9px] text-muted-foreground uppercase tracking-widest font-black leading-none opacity-60">Verified Node</span>
                     </div>
-                    <div style="overflow: hidden;">
-                        <div style="font-size: 0.85rem; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            {{ user.email }}
-                        </div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); font-family: var(--font-data);">Verified Accountant</div>
+                    <form action="{% url 'core:logout' %}" method="post" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-rose-500/20 bg-rose-500/5 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest active:scale-95">
+                            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                            Sign Out
+                        </button>
+                    </form>
+                </div>
+            {% else %}
+                <a href="{% url 'core:login' %}" class="text-sm font-medium hover:underline">Log In</a>
+                <a href="{% url 'core:signup' %}" class="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors">Sign Up</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Sidebar -->
+        {% if user.is_authenticated %}
+        <aside class="w-64 border-r bg-card/30 flex flex-col p-4 overflow-y-auto">
+            <div class="space-y-6">
+                <!-- Navigation Section -->
+                <div>
+                    <h4 class="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Main Menu</h4>
+                    <div class="space-y-1">
+                        <a href="{% url 'core:index' %}" class="sidebar-item {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4 text-blue-400"></i>
+                            Overview
+                        </a>
+                        {% if not business %}
+                        <a href="{% url 'core:business_create' %}" class="sidebar-item group">
+                            <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400 group-hover:rotate-90 transition-transform"></i>
+                            New Entity
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
 
-                <a href="{% url 'core:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
-                    <i>🏠</i> Home
-                </a>
-
                 {% if business %}
-                    <div class="sidebar-section">Repository: <span class="repo-name">{{ business.name | truncatechars:15 }}</span></div>
-                    <a href="{% url 'core:business_detail' business.id %}" class="{% if request.resolver_match.url_name == 'business_detail' %}active{% endif %}">
-                        <i>📊</i> Business Hub
-                    </a>
-                    <a href="{% url 'core:upload_document' business.id %}" class="{% if request.resolver_match.url_name == 'upload_document' %}active{% endif %}">
-                        <i>📤</i> Upload Entry
-                    </a>
-                    <a href="{% url 'core:documents_list' business.id %}" class="{% if request.resolver_match.url_name == 'documents_list' %}active{% endif %}">
-                        <i>📂</i> Audit Vault
-                    </a>
+                <!-- Business Hub Section -->
+                <div>
+                    <h4 class="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Current Entity</h4>
+                    <div class="px-3 py-2 rounded-lg bg-white/5 border border-white/10 mb-2 truncate font-mono text-xs text-blue-300">
+                        {{ business.name }}
+                    </div>
+                    <div class="space-y-1">
+                        <a href="{% url 'core:business_detail' business.id %}" class="sidebar-item {% if request.resolver_match.url_name == 'business_detail' %}active{% endif %}">
+                            <i data-lucide="activity" class="w-4 h-4 text-indigo-400"></i>
+                            Business Hub
+                        </a>
+                        <a href="{% url 'core:upload_document' business.id %}" class="sidebar-item {% if request.resolver_match.url_name == 'upload_document' %}active{% endif %}">
+                            <i data-lucide="upload-cloud" class="w-4 h-4 text-sky-400"></i>
+                            Upload OCR
+                        </a>
+                        <a href="{% url 'core:documents_list' business.id %}" class="sidebar-item {% if request.resolver_match.url_name == 'documents_list' %}active{% endif %}">
+                            <i data-lucide="files" class="w-4 h-4 text-amber-400"></i>
+                            Audit Vault
+                        </a>
+                    </div>
+                </div>
 
-                    <div class="sidebar-section">Financial Controls</div>
-                    <a href="{% url 'ledger:day-book' business.id %}"><i>📓</i> Day Book</a>
-                    <a href="{% url 'ledger:trial-balance' business.id %}"><i>⚖️</i> Trial Balance</a>
-                    <a href="{% url 'ledger:profit-loss' business.id %}"><i>📈</i> Profit & Loss</a>
-                    <a href="{% url 'ledger:balance-sheet' business.id %}"><i>📉</i> Balance Sheet</a>
-                    
-                    <div class="sidebar-section">God-Mode Access</div>
-                    <a href="{% url 'ledger:forensic-dashboard' business.id %}" class="{% if request.resolver_match.url_name == 'forensic-dashboard' %}active{% endif %}">
-                        <i>🕵️</i> Forensic Shield
-                    </a>
-                    <a href="{% url 'ledger:amortization-tracker' business.id %}" class="{% if request.resolver_match.url_name == 'amortization-tracker' %}active{% endif %}">
-                        <i>📅</i> Amortization
-                    </a>
-                    <a href="{% url 'ledger:intercompany-tower' business.id %}" class="{% if request.resolver_match.url_name == 'intercompany-tower' %}active{% endif %}">
-                        <i>🌐</i> Group Sync
-                    </a>
-                    <a href="{% url 'ledger:security-audit' business.id %}" class="{% if request.resolver_match.url_name == 'security-audit' %}active{% endif %}">
-                        <i>🛡️</i> Security & Perf
-                    </a>
-                {% else %}
-                    <a href="{% url 'core:business_create' %}" class="btn"><i>➕</i> Register Business</a>
+                <!-- Financial Controls -->
+                <div>
+                    <h4 class="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Financials</h4>
+                    <div class="space-y-1">
+                        <a href="{% url 'ledger:day-book' business.id %}" class="sidebar-item">
+                            <i data-lucide="book-open" class="w-4 h-4 text-rose-400"></i>
+                            Day Book
+                        </a>
+                        <a href="{% url 'ledger:trial-balance' business.id %}" class="sidebar-item">
+                            <i data-lucide="scale" class="w-4 h-4 text-violet-400"></i>
+                            Trial Balance
+                        </a>
+                        <a href="{% url 'ledger:profit-loss' business.id %}" class="sidebar-item">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+                            Profit & Loss
+                        </a>
+                        <a href="{% url 'ledger:balance-sheet' business.id %}" class="sidebar-item">
+                            <i data-lucide="briefcase" class="w-4 h-4 text-cyan-400"></i>
+                            Balance Sheet
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Forensic Section -->
+                <div>
+                    <h4 class="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Security</h4>
+                    <div class="space-y-1">
+                        <a href="{% url 'ledger:forensic-dashboard' business.id %}" class="sidebar-item {% if request.resolver_match.url_name == 'forensic-dashboard' %}active{% endif %}">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-red-400"></i>
+                            Forensic Shield
+                        </a>
+                        <a href="{% url 'ledger:security-audit' business.id %}" class="sidebar-item {% if request.resolver_match.url_name == 'security-audit' %}active{% endif %}">
+                            <i data-lucide="cpu" class="w-4 h-4 text-zinc-400"></i>
+                            Perf Audit
+                        </a>
+                    </div>
+                </div>
                 {% endif %}
 
-                <div class="sidebar-section">Settings</div>
-                <a href="#"><i>👤</i> Profile</a>
-                <a href="#"><i>⚙️</i> API Config</a>
-            {% endif %}
-        </div>
-
-        <div class="main-content">
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert-gh">
-                        {{ message }}
+                <!-- Settings Section -->
+                <div>
+                    <h4 class="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">System</h4>
+                    <div class="space-y-1">
+                        <a href="#" class="sidebar-item">
+                            <i data-lucide="user-cog" class="w-4 h-4 text-muted-foreground"></i>
+                            Profile
+                        </a>
+                        <a href="#" class="sidebar-item">
+                            <i data-lucide="terminal" class="w-4 h-4 text-muted-foreground"></i>
+                            Developer API
+                        </a>
                     </div>
-                {% endfor %}
-            {% endif %}
+                </div>
+            </div>
+            
+            <div class="mt-auto pt-6 px-3">
+                <div class="p-4 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
+                    <p class="text-[10px] text-indigo-300 font-bold uppercase tracking-wider mb-1">CFO Tip</p>
+                    <p class="text-xs text-muted-foreground leading-relaxed">
+                        Tax savings are optimized relative to your input credit matches.
+                    </p>
+                </div>
+            </div>
+        </aside>
+        {% endif %}
 
-            {% block content %}{% endblock %}
-        </div>
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col overflow-hidden bg-background">
+            <!-- Messages -->
+            <div id="toast-container" class="fixed top-20 right-6 z-[100] space-y-2">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="flex items-center gap-3 bg-card border-l-4 border-l-blue-500 px-4 py-3 rounded-md shadow-2xl animate-in slide-in-from-right-10">
+                            <i data-lucide="info" class="w-4 h-4 text-blue-500"></i>
+                            <span class="text-sm font-medium">{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-8">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
     </div>
+
+    <!-- Mouse Tracking Script for Glow -->
+    <script>
+        const glow = document.getElementById('cursor-glow');
+        let mouseX = 0, mouseY = 0;
+        let glowX = 0, glowY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            
+            // Interaction detection for scaling
+            const target = e.target;
+            if (target.closest('a, button, input, select, .sidebar-item')) {
+                document.body.classList.add('cursor-hover');
+            } else {
+                document.body.classList.remove('cursor-hover');
+            }
+        });
+
+        const animateGlow = () => {
+            // Smooth interpolation (Lerp)
+            glowX += (mouseX - glowX) * 0.1;
+            glowY += (mouseY - glowY) * 0.1;
+
+            glow.style.left = `${glowX}px`;
+            glow.style.top = `${glowY}px`;
+
+            requestAnimationFrame(animateGlow);
+        };
+
+        animateGlow();
+    </script>
+
+    <!-- Initialize Lucide Icons & Global Form Decorator -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // High-Performance Data Visualization Config
+            if (window.Chart) {
+                Chart.defaults.devicePixelRatio = window.devicePixelRatio || 1;
+                Chart.defaults.font.family = "'JetBrains Mono', monospace";
+                Chart.defaults.color = '#94a3b8';
+                Chart.defaults.plugins.tooltip.backgroundColor = '#020617';
+                Chart.defaults.plugins.tooltip.borderColor = 'rgba(255,255,255,0.1)';
+                Chart.defaults.plugins.tooltip.borderWidth = 1;
+            }
+
+            // Global Form Decorator: Auto-style Django Native Fields
+            const decorateForms = () => {
+                const fields = document.querySelectorAll('input, select, textarea');
+                fields.forEach(field => {
+                    if (field.type === 'checkbox' || field.type === 'radio') return;
+                    if (field.tagName === 'BUTTON' || field.type === 'submit') return;
+                    
+                    field.classList.add('flex', 'h-10', 'w-full', 'rounded-md', 'border', 'border-input', 'bg-background', 'px-3', 'py-2', 'text-sm', 'ring-offset-background', 'file:border-0', 'file:bg-transparent', 'file:text-sm', 'file:font-medium', 'placeholder:text-muted-foreground', 'focus-visible:outline-none', 'focus-visible:ring-2', 'focus-visible:ring-ring', 'focus-visible:ring-offset-2', 'disabled:cursor-not-allowed', 'disabled:opacity-50');
+                });
+            };
+
+            decorateForms();
+            lucide.createIcons();
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

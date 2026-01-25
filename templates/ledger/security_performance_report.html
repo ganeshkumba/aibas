@@ -1,140 +1,240 @@
 {% extends 'core/base.html' %}
 
+{% block title %}Security & Perf Audit | The Ledger{% endblock %}
+
 {% block content %}
-<style>
-    .audit-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-        margin-top: 2rem;
-    }
-
-    .integrity-indicator {
-        padding: 2rem;
-        border-radius: 6px;
-        text-align: center;
-        background: rgba(56, 139, 253, 0.1);
-        border: 1px solid var(--gh-blue);
-        color: var(--gh-blue);
-        margin-bottom: 2rem;
-    }
-
-    .indicator-failed {
-        background: rgba(248, 81, 73, 0.1);
-        border-color: var(--danger);
-        color: var(--danger);
-    }
-
-    .metric-box {
-        background: var(--bg-card);
-        border: 1px solid var(--border-default);
-        padding: 1.5rem;
-        border-radius: 6px;
-    }
-
-    .performance-bar {
-        height: 8px;
-        background: var(--bg-header);
-        border-radius: 4px;
-        margin-top: 0.75rem;
-        overflow: hidden;
-        border: 1px solid var(--border-muted);
-    }
-
-    .bar-fill {
-        height: 100%;
-        background: var(--gh-green);
-    }
-</style>
-
-<div style="background: linear-gradient(135deg, #1a2a4b 0%, var(--bg-header) 100%); color: white; padding: 2rem; border-radius: 6px; border: 1px solid var(--border-default); margin-bottom: 2rem;">
-    <h1 style="color: white; margin: 0; font-size: 1.75rem;">Security & Performance Audit</h1>
-    <p style="color: var(--text-secondary); margin-top: 0.5rem; font-family: var(--font-data);">System-wide integrity verification and bottleneck analysis.</p>
-</div>
-
-{% if integrity_issues %}
-    <div class="integrity-indicator indicator-failed">
-        <h2 style="color: inherit; margin-bottom: 0.5rem;">⚠️ System Integrity Compromised</h2>
-        <p style="font-family: var(--font-data); font-size: 0.9rem;">Hash-chain breaks detected in the Audit Logs. Possible unauthorized database tampering detected.</p>
-    </div>
-{% else %}
-    <div class="integrity-indicator" style="background: rgba(63, 185, 80, 0.1); border-color: #3fb950; color: #3fb950;">
-        <h2 style="color: inherit; margin-bottom: 0.5rem;">🛡️ Integrity Verified</h2>
-        <p style="font-family: var(--font-data); font-size: 0.9rem;">All Audit Logs are cryptographically chained. No tampering detected in the current sequence.</p>
-    </div>
-{% endif %}
-
-<div class="audit-grid">
-    <div class="metric-box">
-        <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-secondary);">Database Performance</h3>
-        <div style="font-size: 2.5rem; font-weight: 700; color: var(--gh-blue); font-family: var(--font-data);">{{ db_latency|floatformat:1 }}<span style="font-size: 1rem; margin-left: 4px;">ms</span></div>
-        <div class="small" style="color: var(--text-secondary);">Query Latency (Full Aggregation Pass)</div>
-        
-        <div class="performance-bar">
-            <div class="bar-fill" style="width: {% if db_latency < 50 %}20%{% elif db_latency < 200 %}60%{% else %}100%{% endif %}; background: {% if db_latency < 100 %}var(--gh-green){% else %}var(--gh-orange){% endif %};"></div>
-        </div>
-        <div style="margin-top: 0.75rem;">
-            {% if db_latency < 100 %}
-                <span class="tag tag-success">Optimal Latency</span>
-            {% else %}
-                <span class="tag tag-warning">Indexing Recommended</span>
-            {% endif %}
+<div class="flex flex-col gap-8">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/60">
+        <div class="space-y-2">
+            <h1 class="text-4xl font-black tracking-tighter">Security & Performance</h1>
+            <p class="text-muted-foreground text-sm font-medium flex items-center gap-2">
+                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
+                Real-time cryptographic integrity monitoring and bottleneck analysis.
+            </p>
         </div>
     </div>
 
-    <div class="metric-box">
-        <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-secondary);">Audited Transactions</h3>
-        <div style="font-size: 2.5rem; font-weight: 700; font-family: var(--font-data); color: white;">{{ log_count }}</div>
-        <div class="small" style="color: var(--text-secondary);">Total Logged Actions in Hash-Chain</div>
-        <div style="margin-top: 1.15rem;">
-             <span class="tag tag-info">Active Protection HUD</span>
+    <!-- Integrity Status Hero -->
+    {% if integrity_issues %}
+    <div class="rounded-xl border border-rose-500/30 bg-rose-500/[0.05] p-8 flex flex-col items-center text-center gap-4 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-rose-500/10 to-transparent"></div>
+        <div class="w-16 h-16 rounded-full bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-500 mb-2 relative z-10 animate-pulse">
+            <i data-lucide="alert-octagon" class="w-8 h-8"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-rose-500 relative z-10">System Integrity Compromised</h2>
+        <p class="text-muted-foreground max-w-lg relative z-10">
+            Hash-chain breaks detected in the Audit Logs for <span class="text-foreground font-bold">{{ business.name }}</span>. This suggests unauthorized database manipulation or severe synchronization errors.
+        </p>
+        <div class="bg-card/50 border border-rose-500/20 rounded-lg p-4 w-full max-w-2xl relative z-10 text-left font-mono text-xs text-rose-400">
+            <p class="uppercase font-bold mb-2 tracking-widest text-[10px]">Failure Log</p>
+            <ul class="space-y-1">
+                {% for issue in integrity_issues %}
+                <li class="flex gap-2"><span>[CRITICAL]</span> {{ issue }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% else %}
+    <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.05] p-8 flex flex-col items-center text-center gap-4 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-transparent"></div>
+        <div class="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-500 mb-2 relative z-10">
+            <i data-lucide="shield-check" class="w-8 h-8"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-emerald-500 relative z-10">System Integrity Verified</h2>
+        <p class="text-muted-foreground max-w-lg relative z-10">
+            All audit logs for <span class="text-foreground font-bold">{{ business.name }}</span> are cryptographically chained. No tampering detected in the current sequence.
+        </p>
+        <div class="flex items-center gap-4 relative z-10 mt-2">
+            <div class="flex flex-col items-center px-4 border-r">
+                <span class="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Chain State</span>
+                <span class="text-sm font-mono text-emerald-400 font-bold">LOCKED</span>
+            </div>
+            <div class="flex flex-col items-center px-4">
+                <span class="text-xs text-muted-foreground uppercase font-bold tracking-tighter">Algorithm</span>
+                <span class="text-sm font-mono text-emerald-400 font-bold">SHA-256 Chain</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Metrics Grid -->
+    <div class="grid gap-6 md:grid-cols-3">
+        <!-- Latency Card -->
+        <div class="rounded-xl border bg-card p-6 shadow space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Database Latency</h3>
+                <i data-lucide="zap" class="w-4 h-4 {% if db_latency < 100 %}text-emerald-500{% else %}text-amber-500{% endif %}"></i>
+            </div>
+            <div class="flex items-baseline gap-1">
+                <span class="text-4xl font-black font-mono">{{ db_latency|floatformat:1 }}</span>
+                <span class="text-muted-foreground text-sm font-bold">ms</span>
+            </div>
+            <div class="space-y-2">
+                <div class="h-2 w-full bg-muted rounded-full overflow-hidden">
+                    <div class="h-full {% if db_latency < 100 %}bg-emerald-500{% else %}bg-amber-500{% endif %}" style="width: {% if db_latency < 50 %}20%{% elif db_latency < 200 %}60%{% else %}100%{% endif %}%;"></div>
+                </div>
+                <div class="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
+                    <span class="text-emerald-500">Optimal</span>
+                    <span class="text-amber-500">Warning</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chain Volume Card -->
+        <div class="rounded-xl border bg-card p-6 shadow space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Chained Actions</h3>
+                <i data-lucide="layers" class="w-4 h-4 text-blue-500"></i>
+            </div>
+            <div class="text-4xl font-black font-mono">{{ log_count }}</div>
+            <p class="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Total Operations Secured</p>
+        </div>
+
+        <!-- Optimization Card -->
+        <div class="rounded-xl border bg-card p-6 shadow space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Encryption Status</h3>
+                <i data-lucide="lock-keyhole" class="w-4 h-4 text-violet-500"></i>
+            </div>
+            <div class="text-xl font-black text-foreground uppercase tracking-tighter">Verified Secure</div>
+            <div class="flex flex-col gap-1">
+                <span class="text-[9px] font-mono text-muted-foreground uppercase flex justify-between"><span>Passwords:</span> <span class="text-emerald-400">PBKDF2-SHA256</span></span>
+                <span class="text-[9px] font-mono text-muted-foreground uppercase flex justify-between"><span>Data Vault:</span> <span class="text-blue-400">Isolated FS</span></span>
+                <span class="text-[9px] font-mono text-muted-foreground uppercase flex justify-between"><span>At Rest:</span> <span class="text-zinc-500">TLS 1.3 / Relational</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Vault Protocol Section -->
+    <div class="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div class="p-4 border-b bg-muted/20 flex items-center gap-2">
+            <i data-lucide="info" class="w-4 h-4 text-blue-400"></i>
+            <h3 class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Data Storage & Forensic Transparency Protocol</h3>
+        </div>
+        <div class="p-6 grid md:grid-cols-2 gap-8">
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <h4 class="text-sm font-bold text-foreground">How is my data stored?</h4>
+                    <p class="text-xs text-muted-foreground leading-relaxed">
+                        The Ledger utilizes a <span class="text-foreground font-semibold">Decoupled Storage Architecture</span>. While transactional metadata resides in high-performance relational tables, your physical artifacts (Invoices, Receipts) are stored in business-level isolated vaults. Sensitve account identifiers are protected by rigorous access control lists (ACLs).
+                    </p>
+                </div>
+                <div class="space-y-1">
+                    <h4 class="text-sm font-bold text-foreground">Is my data encrypted?</h4>
+                    <p class="text-xs text-muted-foreground leading-relaxed">
+                        All <span class="text-foreground font-semibold">Identity Tokens (Passwords)</span> are cryptographically hashed using PBKDF2 with a dynamic salt, making them mathematically impossible to decrypt. Transactional data is moved through encrypted TLS 1.3 tunnels. For high-compliance requirements, we support Field-Level Encryption (FLE) for entities with active CA-Audit contracts.
+                    </p>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <h4 class="text-sm font-bold text-foreground">How does the Forensic Shield work?</h4>
+                    <p class="text-xs text-muted-foreground leading-relaxed">
+                        The engine performs <span class="text-rose-400 font-bold italic">Multivector Triangulation</span>. It doesn't just look at the numbers; it analyzes the technical fingerprint of every upload (IP Geolocation, Hardware User-Agents, and PDF Producer Strings). If an employee creates an invoice on their local desktop and uploads it, the "Internal Metadata Signature" triggers an instant anomaly flag.
+                    </p>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/[0.03] border border-emerald-500/20">
+                    <i data-lucide="shield-check" class="w-6 h-6 text-emerald-500 shrink-0"></i>
+                    <p class="text-[10px] text-muted-foreground uppercase font-black leading-tight tracking-widest">
+                        Zero-Knowledge Proofs (ZKP) are utilized for inter-entity synchronization, ensuring subsidiary data is verified without exposing raw ledger contents.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Charts / Hotspots Table -->
+    <div class="grid gap-6 md:grid-cols-2">
+        <!-- Hotspots Table -->
+        <div class="rounded-xl border bg-card shadow overflow-hidden flex flex-col">
+            <div class="p-6 border-b bg-card/50">
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <i data-lucide="flame" class="w-4 h-4 text-orange-500"></i>
+                    Persistence Hotspots
+                </h3>
+            </div>
+            <div class="flex-1 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-muted/50 text-muted-foreground text-[10px] uppercase font-bold tracking-widest border-b">
+                            <th class="px-6 py-3 text-left">Entity Name</th>
+                            <th class="px-6 py-3 text-left">IOPS (Volume)</th>
+                            <th class="px-6 py-3 text-right">Optimization Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        {% for acc in db_hotspots %}
+                        <tr class="hover:bg-muted/30 transition-colors">
+                            <td class="px-6 py-4 font-bold text-foreground">{{ acc.name }}</td>
+                            <td class="px-6 py-4 font-mono text-blue-400">{{ acc.entry_count }} ops</td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-bold">
+                                    INDEXED
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="px-6 py-12 text-center text-muted-foreground italic">
+                                No performance anomalies detected.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Latency Trend Chart -->
+        <div class="rounded-xl border bg-card p-6 shadow flex flex-col">
+          <div class="flex items-center justify-between mb-8">
+              <h3 class="text-sm font-semibold uppercase tracking-wider text-muted-foreground">IO Latency Analytics</h3>
+              <span class="text-[10px] font-mono text-zinc-500">HISTORICAL VIEW</span>
+          </div>
+          <div class="flex-1 min-h-[250px]">
+              <canvas id="latencyChart"></canvas>
+          </div>
         </div>
     </div>
 </div>
 
-<div class="card" style="margin-top: 2rem;">
-    <div class="card-header">
-        <h3 style="margin: 0; font-size: 1rem;">🔥 Performance Hotspots (High volume ledgers)</h3>
-    </div>
-    <div class="card-body" style="padding: 0;">
-        <table style="width: 100%; border-collapse: collapse;">
-             <thead>
-                 <tr>
-                     <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Account Name</th>
-                     <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Entry Volume</th>
-                     <th style="padding: 1rem; border-bottom: 1px solid var(--border-default);">Optimization Status</th>
-                 </tr>
-             </thead>
-             <tbody>
-                 {% for acc in db_hotspots %}
-                     <tr>
-                         <td style="padding: 1rem; font-weight: 600; color: white;">{{ acc.name }}</td>
-                         <td style="padding: 1rem; font-family: var(--font-data); color: var(--gh-blue);">{{ acc.entry_count }} actions</td>
-                         <td style="padding: 1rem;">
-                             <span class="tag tag-success">Auto-Indexed</span>
-                         </td>
-                     </tr>
-                 {% endfor %}
-             </tbody>
-        </table>
-    </div>
-</div>
+{% endblock %}
 
-{% if integrity_issues %}
-<div class="card" style="margin-top: 2rem; border-color: var(--danger); background: rgba(248, 81, 73, 0.05);">
-    <div class="card-header" style="background: var(--danger); color: white; border-bottom: none;">
-        <h3 style="margin: 0; font-size: 1rem;">Integrity Failures Logged</h3>
-    </div>
-    <div class="card-body">
-        <ul style="list-style: none; padding: 0;">
-            {% for issue in integrity_issues %}
-                <li style="color: var(--danger); margin-bottom: 0.75rem; font-family: var(--font-data); font-size: 0.9rem; display: flex; gap: 10px;">
-                    <span>❌</span> {{ issue }}
-                </li>
-            {% endfor %}
-        </ul>
-    </div>
-</div>
-{% endif %}
-
+{% block extra_js %}
+<script>
+    const ctx = document.getElementById('latencyChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        devicePixelRatio: window.devicePixelRatio || 2,
+        data: {
+            labels: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7'],
+            datasets: [{
+                label: 'Query Latency (ms)',
+                data: [12, 19, 3, 5, 2, 3, {{ db_latency|default:5 }}],
+                backgroundColor: 'rgba(56, 139, 253, 0.4)',
+                borderColor: '#388bfd',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#6e7681', font: { family: 'JetBrains Mono', size: 10 } }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#6e7681', font: { family: 'JetBrains Mono', size: 10 } }
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}

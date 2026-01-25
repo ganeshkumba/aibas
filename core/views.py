@@ -1,6 +1,7 @@
 import threading
 from django.conf import settings
 from decimal import Decimal
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import BusinessForm, DocumentUploadForm, SignUpForm, LoginForm
 from .models import Business, Document
@@ -94,12 +95,14 @@ def business_detail(request, pk):
     summary = CFOService.get_executive_summary(business)
     calendar = CFOService.get_statutory_calendar(business)
     notifications = NotificationService.check_and_notify_deadlines(business)
+    velocity_data = CFOService.get_time_series_data(business)
     
     return render(request, 'core/business_detail.html', {
         'business': business, 
         'summary': summary,
         'calendar': calendar,
-        'notifications': notifications
+        'notifications': notifications,
+        'velocity_data': json.dumps(velocity_data)
     })
 
 

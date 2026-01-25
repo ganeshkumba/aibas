@@ -134,6 +134,27 @@ def profit_loss_view(request, business):
         total_expense = Decimal('0')
         net_profit = Decimal('0')
     
+    # --- Human Readable Insights Engine ---
+    top_expense = max(expense_data, key=lambda x: x.get('amount', 0)) if expense_data else None
+    
+    # Efficiency Score (1-10 scale)
+    if total_expense > 0:
+        ratio = total_income / total_expense
+        efficiency_score = min(float(ratio * 3), 10.0) # Scaled multiplier for gamified feel
+    else:
+        efficiency_score = 10.0 if total_income > 0 else 0
+        
+    # Semantic Status
+    if net_profit > 0:
+        if net_profit / total_income > Decimal('0.3'):
+            profit_status = "High Performance"
+        else:
+            profit_status = "Stable Growth"
+    elif net_profit < 0:
+        profit_status = "Active Burn"
+    else:
+        profit_status = "Neutral Position"
+
     return render(request, 'ledger/profit_loss.html', {
         'business': business,
         'income_data': income_data,
@@ -141,6 +162,14 @@ def profit_loss_view(request, business):
         'total_income': total_income,
         'total_expense': total_expense,
         'net_profit': net_profit,
+        'net_profit_abs': abs(net_profit),
+        'burn_percentage': (total_expense / total_income * 100) if total_income > 0 else 100,
+        'monthly_burn': total_expense / 12,
+        'net_margin': (net_profit / total_income * 100) if total_income > 0 else 0,
+        'top_expense': top_expense,
+        'efficiency_score': round(efficiency_score, 1),
+        'efficiency_percentage': min(efficiency_score * 10, 100),
+        'profit_status': profit_status,
         'snapshot': latest_snap
     })
 
@@ -484,14 +513,23 @@ def forensic_dashboard_view(request, business):
     
     suspicious_docs = Document.objects.filter(business=business, is_suspicious=True).order_by('-uploaded_at')
     
-    # Simple IP Analysis
-    from django.db.models import Count
+    # IP Analysis
     ip_stats = Document.objects.filter(business=business).values('upload_ip').annotate(count=Count('id')).order_by('-count')
+    
+    # Reason Analysis for Chart
+    reasons = Document.objects.filter(business=business, is_suspicious=True).values('suspicion_reason').annotate(count=Count('id'))
+    
+    import json
+    forensic_chart = {
+        'labels': [r['suspicion_reason'] or 'Uncategorized' for r in reasons],
+        'values': [r['count'] for r in reasons]
+    }
     
     return render(request, 'ledger/forensic_dashboard.html', {
         'business': business,
         'suspicious_docs': suspicious_docs,
-        'ip_stats': ip_stats
+        'ip_stats': ip_stats,
+        'forensic_chart': json.dumps(forensic_chart)
     })
 
 @login_required
@@ -503,14 +541,29 @@ def amortization_tracker_view(request, business):
     active_schedules = schedules.filter(is_active=True)
     completed_schedules = schedules.filter(is_active=False)
     
-    # Calculate totals
-    total_prepaid = schedules.filter(is_active=True).aggregate(total=Sum('total_amount'))['total'] or 0
+    total_prepaid = active_schedules.aggregate(total=Sum('total_amount'))['total'] or 0
     
+    # Chart Data: Amortization progress
+    amortization_stats = []
+    for s in active_schedules[:5]:
+        paid = s.movements.filter(is_posted=True).aggregate(total=Sum('amount'))['total'] or 0
+        amortization_stats.append({
+            'name': s.expense_account.name,
+            'paid': float(paid),
+            'remaining': float(s.total_amount - paid)
+        })
+    
+    import json
     return render(request, 'ledger/amortization_tracker.html', {
         'business': business,
         'active_schedules': active_schedules,
         'completed_schedules': completed_schedules,
-        'total_prepaid': total_prepaid
+        'total_prepaid': total_prepaid,
+        'chart_data': json.dumps({
+            'labels': [x['name'] for x in amortization_stats],
+            'paid': [x['paid'] for x in amortization_stats],
+            'remaining': [x['remaining'] for x in amortization_stats]
+        })
     })
 
 @login_required
@@ -523,11 +576,26 @@ def intercompany_control_tower_view(request, business):
     # Find transactions flagged for intercompany
     intercompany_docs = Document.objects.filter(business=business, accounting_logic__contains='INTERCOMPANY')
     
+    # Calculate relative balances
+    subsidiary_data = []
+    for sub in subsidiaries:
+        # Simple heuristic: total intercompany document value for sub
+        val = Document.objects.filter(business=business, upload_ip__icontains=str(sub.id)).count() # Mocking logic as we don't have direct ledger links yet
+        subsidiary_data.append({
+            'name': sub.name,
+            'activity': val
+        })
+    
+    import json
     return render(request, 'ledger/intercompany_control.html', {
         'business': business,
         'subsidiaries': subsidiaries,
         'parent': parent,
-        'intercompany_docs': intercompany_docs
+        'intercompany_docs': intercompany_docs,
+        'sync_chart': json.dumps({
+            'labels': [x['name'] for x in subsidiary_data],
+            'values': [x['activity'] for x in subsidiary_data]
+        })
     })
 
 @login_required
