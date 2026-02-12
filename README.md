@@ -1,5 +1,4 @@
-# 🇮🇳 The Ledger: "God-Mode" AI Accounting & Audit Co-Pilot
-
+# THE LEDGER
 [![Standard: Indian GAAP](https://img.shields.io/badge/Standard-Indian%20GAAP-blue.svg)](https://en.wikipedia.org/wiki/Generally_Accepted_Accounting_Principles_(India))
 [![AI: Gemini 1.5 Flash](https://img.shields.io/badge/AI-Gemini%201.5%20Flash-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework: Django 5.x](https://img.shields.io/badge/Framework-Django%205.x-green.svg)](https://www.djangoproject.com/)
