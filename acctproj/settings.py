@@ -1,3 +1,4 @@
+import platform  # Added this to handle Tesseract on Render
 from pathlib import Path
 from decouple import config, Csv
 
@@ -9,8 +10,13 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+# 1. FIXED: Added aibas.onrender.com to default
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,aibas.onrender.com', cast=Csv())
+
+# 2. FIXED: Separated these lines (they were joined in your snippet)
 CSRF_TRUSTED_ORIGINS = [f"http://{host}:8000" for host in ALLOWED_HOSTS] + [f"https://{host}" for host in ALLOWED_HOSTS]
+
+# 3. REMOVED: Deleted the 'ALLOWED_HOTS += ()' line (it was a typo and would crash the app)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -30,7 +36,13 @@ INSTALLED_APPS = [
 AI_PROVIDER = config('AI_PROVIDER', default='ollama')
 OLLAMA_URL = config('OLLAMA_URL', default='http://localhost:11434/api/generate')
 OLLAMA_MODEL = config('OLLAMA_MODEL', default='llama3.1')
-TESSERACT_CMD = config('TESSERACT_CMD', default=r'C:\Program Files\Tesseract-OCR\tesseract.exe')
+
+# 4. FIXED: Tesseract path logic for Linux/Render support
+if platform.system() == 'Windows':
+    TESSERACT_CMD = config('TESSERACT_CMD', default=r'C:\Program Files\Tesseract-OCR\tesseract.exe')
+else:
+    TESSERACT_CMD = config('TESSERACT_CMD', default='tesseract')
+
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
 MIDDLEWARE = [
@@ -45,11 +57,11 @@ MIDDLEWARE = [
 ]
 
 # --- GOD-MODE SECURITY HEADERS ---
-# Prevents XSS, Clickjacking, and MIME-sniffing even in local dev
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 REFERRER_POLICY = 'same-origin'
+
 # Content Security Policy (Basic)
 CSP_DEFAULT_SRC = ("'self'",)
 CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com")
@@ -61,8 +73,6 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
@@ -97,21 +107,10 @@ DATABASES = {
 }
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {
-            'min_length': 9,
-        }
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 9}},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 LANGUAGE_CODE = 'en-us'
