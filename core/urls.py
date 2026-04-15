@@ -1,7 +1,7 @@
 from django.urls import path
 from django.shortcuts import redirect
 from . import views
-from .api import health
+from .api import health, current_user, businesses
 
 app_name = "core"  # namespacing for reverse() and include()
 
@@ -27,4 +27,6 @@ urlpatterns = [
 
     # API Health
     path('api/health/', health, name='api_health'),
+    path('api/me/', current_user, name='api_me'),
+    path('api/businesses/', businesses, name='api_businesses'),
 ]

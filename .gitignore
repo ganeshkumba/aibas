@@ -3,3 +3,5 @@ db.sqlite3
 media/
 venv/
 .env
+frontend/node_modules/
+frontend/.vite/

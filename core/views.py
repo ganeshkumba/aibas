@@ -55,8 +55,7 @@ def logout_view(request):
 # -------------------- DASHBOARD / BUSINESS --------------------
 @login_required
 def index(request):
-    businesses = Business.objects.filter(created_by=request.user).order_by('-created_at')
-    return render(request, 'core/index.html', {'businesses': businesses})
+    return render(request, "core/react_app.html")
 
 
 @login_required
