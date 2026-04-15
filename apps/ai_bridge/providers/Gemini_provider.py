@@ -27,7 +27,7 @@ class InvoiceSchema(BaseModel):
     vendor: str = Field(..., description="Professional entity name (No addresses, No 'M/s')")
     vendor_gstin: Optional[str] = None
     place_of_supply: Optional[str] = None
-    invoice_no: str
+    invoice_no: Optional[str] = None
     date: str = Field(..., pattern=r"\d{4}-\d{2}-\d{2}")
     total_amount: float
     tax_amount: float
@@ -129,6 +129,12 @@ class GeminiProvider(BaseAIProvider):
                     raise multimodal_err
             
             raw_data = json.loads(response.text)
+            # Gemini may occasionally return a top-level list. Normalize to a mapping.
+            if isinstance(raw_data, list):
+                if raw_data and isinstance(raw_data[0], dict):
+                    raw_data = raw_data[0]
+                else:
+                    raise ValueError("Gemini returned a non-object JSON payload")
 
             # Pydantic Enforcement
             if doc_type == 'bank':

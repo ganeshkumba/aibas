@@ -13,9 +13,9 @@ class InventoryAutomationService:
     Bridge between AI-extracted lines and the Virtual Warehouse.
     """
 
-    @staticmethod
+    @classmethod
     @transaction.atomic
-    def update_stock_from_document(document: Document):
+    def update_stock_from_document(cls, document: Document):
         """
         Processes a document and updates inventory levels.
         """
@@ -71,6 +71,7 @@ class InventoryAutomationService:
             
             if batch_no:
                 batch, _ = Batch.objects.get_or_create(
+                    business=document.business,
                     product=product,
                     batch_number=batch_no,
                     defaults={'expiry_date': cls._parse_date(expiry)}
@@ -81,6 +82,7 @@ class InventoryAutomationService:
             qty = Decimal(str(raw_data.get('quantity') or 1))
             
             StockMovement.objects.create(
+                business=document.business,
                 product=product,
                 batch=batch,
                 type=move_type,
